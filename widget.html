@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日记组件</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  background: transparent;
+  user-select: none;
+  overflow: hidden;
+}
+
+.widget {
+  width: 284px;
+  height: 284px;
+  margin: 8px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: box-shadow 0.3s ease;
+  position: relative;
+  background-size: cover;
+  background-position: center;
+}
+
+.widget.has-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.78);
+  border-radius: 16px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.widget.has-bg > * { position: relative; z-index: 1; }
+
+.widget:hover {
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.12),
+    0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px 8px;
+  -webkit-app-region: drag;
+  cursor: grab;
+}
+
+.drag-dots {
+  display: flex;
+  gap: 2px;
+  flex-direction: column;
+  opacity: 0.25;
+  margin-right: 10px;
+  transition: opacity 0.2s;
+}
+
+.header:hover .drag-dots { opacity: 0.45; }
+
+.drag-dots span {
+  width: 12px;
+  height: 2px;
+  background: #666;
+  border-radius: 1px;
+}
+
+.date-label {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  letter-spacing: 0.3px;
+}
+
+.weekday {
+  font-weight: 400;
+  color: #999;
+  font-size: 12px;
+  margin-left: 6px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 4px;
+  -webkit-app-region: no-drag;
+}
+
+.header-actions button {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.header-actions button:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #555;
+}
+
+.editor-wrap {
+  flex: 1;
+  padding: 0 16px;
+  position: relative;
+}
+
+textarea {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-size: 13px;
+  line-height: 24px;
+  color: #333;
+  background: transparent;
+  padding: 2px 0;
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 23px,
+    rgba(0, 0, 0, 0.05) 23px,
+    rgba(0, 0, 0, 0.05) 24px
+  );
+  background-position-y: 5px;
+  -webkit-app-region: no-drag;
+}
+
+textarea::placeholder {
+  color: #ccc;
+  font-style: italic;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px 10px;
+  font-size: 11px;
+  color: #bbb;
+}
+
+.save-status {
+  transition: opacity 0.3s;
+}
+
+.save-status.saving { color: #e0a030; }
+.save-status.saved { color: #7cc07c; }
+
+.open-app-btn {
+  border: none;
+  background: none;
+  font-size: 11px;
+  color: #aaa;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.15s;
+  -webkit-app-region: no-drag;
+}
+
+.open-app-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #666;
+}
+
+.char-count {
+  font-variant-numeric: tabular-nums;
+}
+</style>
+</head>
+<body>
+
+<div class="widget">
+  <div class="header">
+    <div class="drag-dots">
+      <span></span><span></span><span></span>
+    </div>
+    <div class="date-label">
+      <span id="dateText"></span>
+      <span class="weekday" id="weekdayText"></span>
+    </div>
+    <div class="header-actions">
+      <button id="btnBg" title="更换背景图片">🖼</button>
+    </div>
+  </div>
+
+  <div class="editor-wrap">
+    <textarea id="editor" placeholder="写点什么..."></textarea>
+  </div>
+
+  <div class="footer">
+    <span class="save-status" id="saveStatus"></span>
+    <span class="char-count" id="charCount">0 字</span>
+    <button class="open-app-btn" id="btnOpenApp">打开日记本 →</button>
+  </div>
+</div>
+
+<script>
+const editor = document.getElementById('editor');
+const dateText = document.getElementById('dateText');
+const weekdayText = document.getElementById('weekdayText');
+const saveStatus = document.getElementById('saveStatus');
+const charCount = document.getElementById('charCount');
+
+const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+
+function getToday() {
+  const d = new Date();
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
+}
+
+function formatDateCN(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return `${y}年${m}月${d}日`;
+}
+
+const today = getToday();
+const now = new Date();
+dateText.textContent = formatDateCN(today);
+weekdayText.textContent = weekdays[now.getDay()];
+
+let saveTimer = null;
+
+async function loadToday() {
+  const data = await window.api.loadDiary(today);
+  if (data) {
+    editor.value = data.content;
+    updateCharCount();
+  }
+}
+
+async function save() {
+  const content = editor.value;
+  if (!content.trim()) return;
+  saveStatus.textContent = '保存中...';
+  saveStatus.className = 'save-status saving';
+  try {
+    await window.api.saveDiary(today, content);
+    saveStatus.textContent = '✓ 已保存';
+    saveStatus.className = 'save-status saved';
+  } catch (e) {
+    saveStatus.textContent = '✕ 保存失败';
+    saveStatus.className = 'save-status';
+    saveStatus.style.color = '#e05555';
+    console.error('Save error:', e);
+  }
+  setTimeout(() => { saveStatus.textContent = ''; saveStatus.style.color = ''; }, 2000);
+}
+
+function updateCharCount() {
+  const len = editor.value.replace(/\s/g, '').length;
+  charCount.textContent = `${len} 字`;
+}
+
+editor.addEventListener('input', () => {
+  updateCharCount();
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(save, 800);
+});
+
+document.getElementById('btnOpenApp').addEventListener('click', () => window.api.openMain());
+
+const widgetEl = document.querySelector('.widget');
+
+document.getElementById('btnBg').addEventListener('click', async () => {
+  const dataUrl = await window.api.pickWidgetBg();
+  if (dataUrl) applyBg(dataUrl);
+});
+
+document.getElementById('btnBg').addEventListener('contextmenu', async (e) => {
+  e.preventDefault();
+  await window.api.clearWidgetBg();
+  widgetEl.style.backgroundImage = '';
+  widgetEl.classList.remove('has-bg');
+});
+
+function applyBg(dataUrl) {
+  widgetEl.style.backgroundImage = `url("${dataUrl}")`;
+  widgetEl.classList.add('has-bg');
+}
+
+async function loadBg() {
+  try {
+    const dataUrl = await window.api.getWidgetBg();
+    if (dataUrl) applyBg(dataUrl);
+  } catch {}
+}
+
+loadBg();
+loadToday();
+</script>
+</body>
+</html>

@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Autoral 日记本</title>
+<style>
+/* ── Reset & Base ── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --sidebar-w: 260px;
+  --bg: #ffffff;
+  --sidebar-bg: #f7f7f8;
+  --sidebar-hover: #ededef;
+  --sidebar-active: #e5e5e8;
+  --border: #e8e8eb;
+  --text-1: #1a1a1a;
+  --text-2: #555;
+  --text-3: #999;
+  --accent: #4a90d9;
+  --accent-light: #e8f0fc;
+  --danger: #e05555;
+  --line-h: 28px;
+  --radius: 8px;
+}
+
+body {
+  font-family: "Segoe UI", "Microsoft YaHei", -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text-1);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.sidebar-header {
+  padding: 20px 16px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-title svg { opacity: 0.6; }
+
+.calendar-toggle {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  font-size: 13px;
+  color: var(--text-2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: border-color 0.15s;
+}
+
+.calendar-toggle:hover { border-color: var(--accent); }
+.calendar-toggle .arrow { margin-left: auto; font-size: 10px; transition: transform 0.2s; }
+.calendar-toggle.open .arrow { transform: rotate(180deg); }
+
+/* Calendar Dropdown */
+.calendar-dropdown {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease;
+  background: var(--bg);
+  border-radius: 0 0 var(--radius) var(--radius);
+  margin: 0 0 4px;
+}
+
+.calendar-dropdown.open { max-height: 280px; }
+
+.cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 4px 4px;
+}
+
+.cal-nav button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.cal-nav button:hover { background: var(--sidebar-hover); }
+.cal-nav span { font-size: 13px; font-weight: 600; color: var(--text-1); }
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  padding: 4px;
+}
+
+.cal-grid .day-header {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-3);
+  padding: 4px 0;
+  font-weight: 500;
+}
+
+.cal-grid .day {
+  text-align: center;
+  padding: 5px 0;
+  font-size: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-2);
+  position: relative;
+  transition: all 0.12s;
+}
+
+.cal-grid .day:hover { background: var(--sidebar-hover); }
+.cal-grid .day.today { color: var(--accent); font-weight: 700; }
+.cal-grid .day.selected { background: var(--accent); color: #fff; }
+.cal-grid .day.has-entry::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.cal-grid .day.selected.has-entry::after { background: #fff; }
+.cal-grid .day.other-month { color: #ccc; }
+
+/* Search */
+.search-wrap {
+  padding: 8px 16px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 7px 10px 7px 30px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 13px;
+  outline: none;
+  background: var(--bg);
+  color: var(--text-1);
+  transition: border-color 0.15s;
+}
+
+.search-input:focus { border-color: var(--accent); }
+
+.search-wrap { position: relative; }
+.search-wrap::before {
+  content: '⌕';
+  position: absolute;
+  left: 26px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-3);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+/* New Entry Button */
+.new-entry-btn {
+  margin: 4px 16px 8px;
+  padding: 8px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-3);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.new-entry-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+/* Entry List */
+.entry-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 8px 16px;
+}
+
+.entry-list::-webkit-scrollbar { width: 4px; }
+.entry-list::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+.entry-list::-webkit-scrollbar-thumb:hover { background: #bbb; }
+
+.month-group { margin-bottom: 4px; }
+
+.month-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  padding: 10px 10px 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.entry-item {
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.12s;
+  margin-bottom: 2px;
+  position: relative;
+}
+
+.entry-item:hover { background: var(--sidebar-hover); }
+.entry-item.active { background: var(--sidebar-active); }
+
+.entry-date {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+  margin-bottom: 2px;
+}
+
+.entry-preview {
+  font-size: 12px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.entry-item .delete-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  font-size: 14px;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.entry-item:hover .delete-btn { opacity: 1; }
+.entry-item .delete-btn:hover { background: rgba(224, 85, 85, 0.1); color: var(--danger); }
+
+/* ── Main Content ── */
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-width: 0;
+}
+
+.content-header {
+  padding: 20px 28px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.content-date {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.content-weekday {
+  font-weight: 400;
+  color: var(--text-3);
+  font-size: 14px;
+  margin-left: 8px;
+}
+
+.mode-toggle {
+  display: flex;
+  gap: 2px;
+  background: var(--sidebar-bg);
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.mode-toggle button {
+  padding: 5px 14px;
+  border: none;
+  border-radius: 5px;
+  font-size: 12px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-3);
+  transition: all 0.15s;
+}
+
+.mode-toggle button.active {
+  background: var(--bg);
+  color: var(--text-1);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.content-body {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Editor */
+.editor-area {
+  position: absolute;
+  inset: 0;
+  padding: 20px 28px;
+  overflow-y: auto;
+}
+
+.editor-area::-webkit-scrollbar { width: 6px; }
+.editor-area::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+
+.editor-area textarea {
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: "Cascadia Code", "Consolas", "Microsoft YaHei", monospace;
+  font-size: 14px;
+  line-height: var(--line-h);
+  color: var(--text-1);
+  padding: 2px 0;
+  background: transparent;
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent calc(var(--line-h) - 1px),
+    #ebebeb calc(var(--line-h) - 1px),
+    #ebebeb var(--line-h)
+  );
+  background-position-y: 4px;
+}
+
+.editor-area textarea::placeholder { color: #ccc; }
+
+/* Preview */
+.preview-area {
+  position: absolute;
+  inset: 0;
+  padding: 20px 28px;
+  overflow-y: auto;
+  display: none;
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent calc(var(--line-h) - 1px),
+    #efefef calc(var(--line-h) - 1px),
+    #efefef var(--line-h)
+  );
+  background-position-y: 4px;
+}
+
+.preview-area::-webkit-scrollbar { width: 6px; }
+.preview-area::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+
+.preview-area.visible { display: block; }
+.editor-area.hidden { display: none; }
+
+/* Markdown Rendered Styles */
+.preview-area h1 { font-size: 22px; font-weight: 700; margin: 8px 0; color: var(--text-1); line-height: calc(var(--line-h) * 1.5); }
+.preview-area h2 { font-size: 18px; font-weight: 700; margin: 6px 0; color: var(--text-1); line-height: calc(var(--line-h) * 1.2); }
+.preview-area h3 { font-size: 15px; font-weight: 600; margin: 4px 0; color: var(--text-2); }
+.preview-area p { font-size: 14px; line-height: var(--line-h); margin-bottom: 4px; }
+.preview-area ul, .preview-area ol { padding-left: 20px; margin-bottom: 4px; }
+.preview-area li { font-size: 14px; line-height: var(--line-h); }
+.preview-area blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 14px;
+  color: var(--text-2);
+  margin: 8px 0;
+  font-style: italic;
+}
+.preview-area code {
+  background: #f4f4f5;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: "Cascadia Code", "Consolas", monospace;
+}
+.preview-area pre {
+  background: #f8f8f9;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  overflow-x: auto;
+  margin: 8px 0;
+  border: 1px solid var(--border);
+}
+.preview-area pre code { background: none; padding: 0; }
+.preview-area hr {
+  border: none;
+  border-top: 2px solid var(--border);
+  margin: 12px 0;
+}
+.preview-area a { color: var(--accent); text-decoration: none; }
+.preview-area a:hover { text-decoration: underline; }
+.preview-area strong { font-weight: 600; }
+.preview-area img { max-width: 100%; border-radius: var(--radius); }
+.preview-area table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+.preview-area th, .preview-area td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  font-size: 13px;
+  text-align: left;
+}
+.preview-area th { background: var(--sidebar-bg); font-weight: 600; }
+
+/* Content Footer */
+.content-footer {
+  padding: 8px 28px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+
+.save-indicator { transition: color 0.3s; }
+.save-indicator.saving { color: #e0a030; }
+.save-indicator.saved { color: #7cc07c; }
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-3);
+  gap: 12px;
+}
+
+.empty-state .icon { font-size: 48px; opacity: 0.3; }
+.empty-state p { font-size: 14px; }
+
+/* ── Responsive ── */
+@media (max-width: 750px) {
+  .sidebar { width: 200px; min-width: 200px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-title">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      </svg>
+      日记本
+    </div>
+
+    <button class="calendar-toggle" id="calToggle">
+      <span>📅</span>
+      <span id="calLabel">选择日期</span>
+      <span class="arrow">▾</span>
+    </button>
+
+    <div class="calendar-dropdown" id="calDropdown">
+      <div class="cal-nav">
+        <button id="calPrev">◂</button>
+        <span id="calTitle"></span>
+        <button id="calNext">▸</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+  </div>
+
+  <div class="search-wrap">
+    <input type="text" class="search-input" id="searchInput" placeholder="搜索日记...">
+  </div>
+
+  <button class="new-entry-btn" id="newEntryBtn">+ 今日新记录</button>
+
+  <div class="entry-list" id="entryList"></div>
+</aside>
+
+<!-- Main Content -->
+<main class="content">
+  <div class="content-header" id="contentHeader">
+    <div>
+      <span class="content-date" id="contentDate">选择一篇日记</span>
+      <span class="content-weekday" id="contentWeekday"></span>
+    </div>
+    <div class="mode-toggle" id="modeToggle" style="display:none;">
+      <button class="active" data-mode="edit">编辑</button>
+      <button data-mode="preview">预览</button>
+    </div>
+  </div>
+
+  <div class="content-body" id="contentBody">
+    <div class="empty-state" id="emptyState">
+      <div class="icon">📖</div>
+      <p>选择左侧日记或创建新记录</p>
+    </div>
+
+    <div class="editor-area" id="editorArea" style="display:none;">
+      <textarea id="mainEditor" placeholder="开始书写今天的日记...&#10;&#10;支持 Markdown 语法：&#10;# 标题&#10;**粗体** *斜体*&#10;- 列表项&#10;--- 分隔线"></textarea>
+    </div>
+
+    <div class="preview-area" id="previewArea"></div>
+  </div>
+
+  <div class="content-footer" id="contentFooter" style="display:none;">
+    <span class="save-indicator" id="mainSaveStatus"></span>
+    <span id="mainCharCount">0 字</span>
+  </div>
+</main>
+
+<script>
+// ── State ──
+let entries = [];
+let selectedDate = null;
+let currentMode = 'edit';
+let calYear, calMonth;
+let entryDates = new Set();
+let saveTimer = null;
+
+const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+const weekdaysFull = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+
+// ── DOM Refs ──
+const $ = id => document.getElementById(id);
+const calToggle = $('calToggle');
+const calDropdown = $('calDropdown');
+const calGrid = $('calGrid');
+const calTitle = $('calTitle');
+const calLabel = $('calLabel');
+const searchInput = $('searchInput');
+const entryList = $('entryList');
+const contentDate = $('contentDate');
+const contentWeekday = $('contentWeekday');
+const modeToggle = $('modeToggle');
+const editorArea = $('editorArea');
+const previewArea = $('previewArea');
+const mainEditor = $('mainEditor');
+const emptyState = $('emptyState');
+const contentFooter = $('contentFooter');
+const mainSaveStatus = $('mainSaveStatus');
+const mainCharCount = $('mainCharCount');
+
+// ── Utilities ──
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function formatDateCN(s) {
+  const [y, m, d] = s.split('-').map(Number);
+  return `${y}年${m}月${d}日`;
+}
+
+function dateWeekday(s) {
+  return weekdaysFull[new Date(s + 'T00:00:00').getDay()];
+}
+
+function formatMonthCN(y, m) {
+  return `${y}年${m}月`;
+}
+
+// ── Calendar ──
+function initCalendar() {
+  const now = new Date();
+  calYear = now.getFullYear();
+  calMonth = now.getMonth();
+  renderCalendar();
+}
+
+function renderCalendar() {
+  calTitle.textContent = formatMonthCN(calYear, calMonth + 1);
+  calGrid.innerHTML = '';
+
+  weekdays.forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'day-header';
+    el.textContent = d;
+    calGrid.appendChild(el);
+  });
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const prevMonthDays = new Date(calYear, calMonth, 0).getDate();
+  const today = todayStr();
+
+  for (let i = 0; i < firstDay; i++) {
+    const el = document.createElement('div');
+    el.className = 'day other-month';
+    el.textContent = prevMonthDays - firstDay + 1 + i;
+    calGrid.appendChild(el);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const el = document.createElement('div');
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    el.className = 'day';
+    el.textContent = d;
+    if (dateStr === today) el.classList.add('today');
+    if (dateStr === selectedDate) el.classList.add('selected');
+    if (entryDates.has(dateStr)) el.classList.add('has-entry');
+    el.addEventListener('click', () => selectDate(dateStr));
+    calGrid.appendChild(el);
+  }
+
+  const totalCells = firstDay + daysInMonth;
+  const remaining = (7 - totalCells % 7) % 7;
+  for (let i = 1; i <= remaining; i++) {
+    const el = document.createElement('div');
+    el.className = 'day other-month';
+    el.textContent = i;
+    calGrid.appendChild(el);
+  }
+}
+
+$('calPrev').addEventListener('click', () => {
+  calMonth--;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  renderCalendar();
+});
+
+$('calNext').addEventListener('click', () => {
+  calMonth++;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendar();
+});
+
+calToggle.addEventListener('click', () => {
+  calDropdown.classList.toggle('open');
+  calToggle.classList.toggle('open');
+});
+
+// ── Entry List ──
+async function loadEntries() {
+  entries = await window.api.listDiaries();
+  entryDates = new Set(entries.map(e => e.date));
+  renderEntryList();
+  renderCalendar();
+}
+
+function renderEntryList(filter = '') {
+  entryList.innerHTML = '';
+  const filtered = filter
+    ? entries.filter(e => e.preview.includes(filter) || e.date.includes(filter))
+    : entries;
+
+  const groups = {};
+  filtered.forEach(e => {
+    const [y, m] = e.date.split('-');
+    const key = `${y}-${m}`;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(e);
+  });
+
+  Object.entries(groups).forEach(([key, items]) => {
+    const [y, m] = key.split('-');
+    const group = document.createElement('div');
+    group.className = 'month-group';
+
+    const label = document.createElement('div');
+    label.className = 'month-label';
+    label.textContent = formatMonthCN(parseInt(y), parseInt(m));
+    group.appendChild(label);
+
+    items.forEach(e => {
+      const item = document.createElement('div');
+      item.className = 'entry-item' + (e.date === selectedDate ? ' active' : '');
+      item.innerHTML = `
+        <div class="entry-date">${formatDateDisplay(e.date)}</div>
+        <div class="entry-preview">${escapeHtml(e.preview) || '空白记录'}</div>
+        <button class="delete-btn" title="删除">✕</button>
+      `;
+      item.addEventListener('click', (ev) => {
+        if (ev.target.classList.contains('delete-btn')) return;
+        selectDate(e.date);
+      });
+      item.querySelector('.delete-btn').addEventListener('click', async (ev) => {
+        ev.stopPropagation();
+        if (confirm(`确认删除 ${formatDateCN(e.date)} 的日记？`)) {
+          await window.api.deleteDiary(e.date);
+          if (selectedDate === e.date) {
+            selectedDate = null;
+            showEmpty();
+          }
+          loadEntries();
+        }
+      });
+      group.appendChild(item);
+    });
+
+    entryList.appendChild(group);
+  });
+
+  if (filtered.length === 0) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'text-align:center;color:#bbb;padding:30px 0;font-size:13px;';
+    empty.textContent = filter ? '没有匹配的记录' : '还没有日记记录';
+    entryList.appendChild(empty);
+  }
+}
+
+function formatDateDisplay(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const today = todayStr();
+  const yesterday = (() => {
+    const dt = new Date(); dt.setDate(dt.getDate() - 1);
+    return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+  })();
+  if (dateStr === today) return `${m}月${d}日 · 今天`;
+  if (dateStr === yesterday) return `${m}月${d}日 · 昨天`;
+  return `${m}月${d}日`;
+}
+
+function escapeHtml(s) {
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+// ── Select & Load Date ──
+async function selectDate(dateStr) {
+  selectedDate = dateStr;
+
+  contentDate.textContent = formatDateCN(dateStr);
+  contentWeekday.textContent = dateWeekday(dateStr);
+  modeToggle.style.display = 'flex';
+  contentFooter.style.display = 'flex';
+  emptyState.style.display = 'none';
+
+  const data = await window.api.loadDiary(dateStr);
+  mainEditor.value = data ? data.content : '';
+  updateMainCharCount();
+
+  const hasContent = data && data.content && data.content.trim();
+  setMode(hasContent ? 'preview' : 'edit');
+  if (!hasContent) mainEditor.focus();
+
+  renderEntryList(searchInput.value);
+  renderCalendar();
+}
+
+function showEmpty() {
+  emptyState.style.display = 'flex';
+  editorArea.style.display = 'none';
+  previewArea.classList.remove('visible');
+  modeToggle.style.display = 'none';
+  contentFooter.style.display = 'none';
+  contentDate.textContent = '选择一篇日记';
+  contentWeekday.textContent = '';
+}
+
+// ── Mode Toggle ──
+function setMode(mode) {
+  currentMode = mode;
+  modeToggle.querySelectorAll('button').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  if (mode === 'edit') {
+    editorArea.classList.remove('hidden');
+    editorArea.style.display = 'block';
+    previewArea.classList.remove('visible');
+  } else {
+    editorArea.classList.add('hidden');
+    editorArea.style.display = 'none';
+    previewArea.classList.add('visible');
+    previewArea.innerHTML = window.api.renderMarkdown(mainEditor.value || '*暂无内容*');
+  }
+}
+
+modeToggle.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-mode]');
+  if (btn) setMode(btn.dataset.mode);
+});
+
+// ── Auto Save ──
+mainEditor.addEventListener('input', () => {
+  updateMainCharCount();
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveCurrentDiary, 600);
+});
+
+async function saveCurrentDiary() {
+  if (!selectedDate) return;
+  const content = mainEditor.value;
+  mainSaveStatus.textContent = '保存中...';
+  mainSaveStatus.className = 'save-indicator saving';
+  await window.api.saveDiary(selectedDate, content);
+  mainSaveStatus.textContent = '✓ 已保存';
+  mainSaveStatus.className = 'save-indicator saved';
+  setTimeout(() => { mainSaveStatus.textContent = ''; mainSaveStatus.className = 'save-indicator'; }, 2000);
+
+  if (!entryDates.has(selectedDate) && content.trim()) {
+    loadEntries();
+  } else {
+    const entry = entries.find(e => e.date === selectedDate);
+    if (entry) {
+      entry.preview = content.replace(/[#*_~`>\-\[\]]/g, '').trim().substring(0, 60);
+      renderEntryList(searchInput.value);
+    } else if (content.trim()) {
+      loadEntries();
+    }
+  }
+}
+
+function updateMainCharCount() {
+  const len = mainEditor.value.replace(/\s/g, '').length;
+  mainCharCount.textContent = `${len} 字`;
+}
+
+// ── Search ──
+let searchTimer;
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => renderEntryList(searchInput.value), 200);
+});
+
+// ── New Entry ──
+$('newEntryBtn').addEventListener('click', () => selectDate(todayStr()));
+
+// ── Keyboard Shortcuts ──
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key === 's') {
+    e.preventDefault();
+    saveCurrentDiary();
+  }
+  if (e.ctrlKey && e.key === 'p') {
+    e.preventDefault();
+    setMode(currentMode === 'edit' ? 'preview' : 'edit');
+  }
+});
+
+// ── Init ──
+initCalendar();
+loadEntries();
+</script>
+</body>
+</html>

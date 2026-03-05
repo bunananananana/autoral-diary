@@ -1,0 +1,65 @@
+{
+  "name": "autoral-diary",
+  "version": "1.0.0",
+  "description": "极简桌面日记小工具 - Minimalist Desktop Diary Widget",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder --win",
+    "build:portable": "electron-builder --win portable",
+    "build:all": "electron-builder --win nsis portable"
+  },
+  "author": "Autoral",
+  "license": "MIT",
+  "build": {
+    "appId": "com.autoral.diary",
+    "productName": "Autoral 日记本",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "widget.html",
+      "app.html",
+      "assets/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "installerHeaderIcon": "assets/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Autoral 日记本",
+      "installerLanguages": ["zh_CN", "en_US"],
+      "language": "2052"
+    },
+    "portable": {
+      "artifactName": "Autoral-日记本-${version}-便携版.exe"
+    }
+  },
+  "devDependencies": {
+    "electron": "^40.7.0",
+    "electron-builder": "^26.8.1"
+  },
+  "dependencies": {
+    "marked": "^4.3.0"
+  }
+}
