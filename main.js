@@ -228,7 +228,14 @@ app.whenReady().then(() => {
 });
 
 app.on('will-quit', () => { globalShortcut.unregisterAll(); });
-app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit();
+});
+
+app.on('activate', () => {
+  if (mainWindow) { mainWindow.show(); mainWindow.focus(); }
+});
 
 app.on('second-instance', () => {
   if (mainWindow) { mainWindow.show(); mainWindow.focus(); }
