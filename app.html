@@ -876,6 +876,24 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// ── Date Change Detection ──
+let lastKnownDate = todayStr();
+
+function checkDateChange() {
+  const now = todayStr();
+  if (now !== lastKnownDate) {
+    lastKnownDate = now;
+    initCalendar();
+    loadEntries();
+  }
+}
+
+setInterval(checkDateChange, 30000);
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) checkDateChange();
+});
+
 // ── Init ──
 initCalendar();
 loadEntries();

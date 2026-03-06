@@ -239,12 +239,29 @@ function formatDateCN(dateStr) {
   return `${y}年${m}月${d}日`;
 }
 
-const today = getToday();
-const now = new Date();
-dateText.textContent = formatDateCN(today);
-weekdayText.textContent = weekdays[now.getDay()];
-
+let today = getToday();
 let saveTimer = null;
+
+function refreshDate() {
+  const now = new Date();
+  dateText.textContent = formatDateCN(today);
+  weekdayText.textContent = weekdays[now.getDay()];
+}
+
+refreshDate();
+
+function checkDateChange() {
+  const newToday = getToday();
+  if (newToday !== today) {
+    today = newToday;
+    refreshDate();
+    editor.value = '';
+    updateCharCount();
+    loadToday();
+  }
+}
+
+setInterval(checkDateChange, 30000);
 
 async function loadToday() {
   const data = await window.api.loadDiary(today);
