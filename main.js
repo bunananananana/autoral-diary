@@ -1,4 +1,5 @@
 const { app, BrowserWindow, Tray, Menu, ipcMain, screen, nativeImage, globalShortcut, dialog } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 
@@ -210,6 +211,34 @@ ipcMain.handle('widget:clear-bg', async () => {
   return true;
 });
 
+// ── Auto Updater ──
+
+function setupAutoUpdater() {
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('update-downloaded', (info) => {
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: '更新就绪',
+      message: `新版本 ${info.version} 已下载完成，是否立即重启并安装？`,
+      buttons: ['立即重启', '稍后'],
+      defaultId: 0,
+    }).then(({ response }) => {
+      if (response === 0) {
+        app.isQuitting = true;
+        autoUpdater.quitAndInstall();
+      }
+    });
+  });
+
+  autoUpdater.on('error', () => {});
+
+  setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 3000);
+
+  setInterval(() => autoUpdater.checkForUpdates().catch(() => {}), 4 * 60 * 60 * 1000);
+}
+
 // ── App Lifecycle ──
 
 app.whenReady().then(() => {
@@ -225,6 +254,8 @@ app.whenReady().then(() => {
       widgetWindow.focus();
     }
   });
+
+  setupAutoUpdater();
 });
 
 app.on('will-quit', () => { globalShortcut.unregisterAll(); });
