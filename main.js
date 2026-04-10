@@ -4,9 +4,13 @@ const path = require('path');
 const fs = require('fs');
 
 const gotTheLock = app.requestSingleInstanceLock();
-if (!gotTheLock) { app.quit(); }
+if (!gotTheLock) app.quit();
 
-let widgetWindow, mainWindow, tray;
+let widgetWindow;
+let mainWindow;
+let exportWindow;
+let tray;
+
 const dataDir = path.join(app.getPath('userData'), 'diaries');
 const exportFileExtension = 'autoral-diary';
 
@@ -48,17 +52,28 @@ function saveDiaryToDisk(date, content, updatedAt = new Date().toISOString()) {
   return data;
 }
 
+function buildDiaryPreview(content) {
+  return String(content || '')
+    .replace(/[#*_~`>\-\[\]]/g, '')
+    .trim()
+    .substring(0, 60);
+}
+
 function createTrayIcon() {
   const s = 16;
   const buf = Buffer.alloc(s * s * 4, 0);
   const set = (x, y, r, g, b, a = 255) => {
     if (x < 0 || x >= s || y < 0 || y >= s) return;
     const i = (y * s + x) * 4;
-    buf[i] = b; buf[i + 1] = g; buf[i + 2] = r; buf[i + 3] = a;
+    buf[i] = b;
+    buf[i + 1] = g;
+    buf[i + 2] = r;
+    buf[i + 3] = a;
   };
   const fill = (x1, y1, x2, y2, r, g, b, a = 255) => {
-    for (let y = y1; y <= y2; y++)
-      for (let x = x1; x <= x2; x++) set(x, y, r, g, b, a);
+    for (let y = y1; y <= y2; y += 1) {
+      for (let x = x1; x <= x2; x += 1) set(x, y, r, g, b, a);
+    }
   };
 
   fill(4, 1, 13, 14, 250, 248, 240);
@@ -102,7 +117,7 @@ function createMainWindow() {
     minWidth: 700,
     minHeight: 450,
     show: false,
-    title: '日记本',
+    title: 'Autoral 日记本',
     backgroundColor: '#ffffff',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -113,22 +128,48 @@ function createMainWindow() {
 
   mainWindow.loadFile('app.html');
 
-  mainWindow.on('close', (e) => {
+  mainWindow.on('close', (event) => {
     if (!app.isQuitting) {
-      e.preventDefault();
+      event.preventDefault();
       mainWindow.hide();
     }
   });
 }
 
-function createTray() {
-  let icon;
-  const iconPath = path.join(__dirname, 'assets', 'icon.png');
-  if (fs.existsSync(iconPath)) {
-    icon = nativeImage.createFromPath(iconPath);
-  } else {
-    icon = createTrayIcon();
+function createExportWindow() {
+  if (exportWindow && !exportWindow.isDestroyed()) {
+    exportWindow.show();
+    exportWindow.focus();
+    return;
   }
+
+  exportWindow = new BrowserWindow({
+    width: 560,
+    height: 720,
+    minWidth: 460,
+    minHeight: 560,
+    parent: mainWindow,
+    modal: true,
+    show: false,
+    title: '导出日记',
+    backgroundColor: '#f7f7f8',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    }
+  });
+
+  exportWindow.loadFile('export.html');
+  exportWindow.once('ready-to-show', () => exportWindow.show());
+  exportWindow.on('closed', () => { exportWindow = null; });
+}
+
+function createTray() {
+  const iconPath = path.join(__dirname, 'assets', 'icon.png');
+  const icon = fs.existsSync(iconPath)
+    ? nativeImage.createFromPath(iconPath)
+    : createTrayIcon();
 
   tray = new Tray(icon);
 
@@ -151,48 +192,54 @@ function createTray() {
   tray.on('click', () => { mainWindow.show(); mainWindow.focus(); });
 }
 
-// ── IPC Handlers ──
+ipcMain.handle('diary:save', async (_, date, content) => saveDiaryToDisk(date, content));
 
-ipcMain.handle('diary:save', async (_, date, content) => {
-  return saveDiaryToDisk(date, content);
-});
-
-ipcMain.handle('diary:load', async (_, date) => {
-  return loadDiaryFromDisk(date);
-});
+ipcMain.handle('diary:load', async (_, date) => loadDiaryFromDisk(date));
 
 ipcMain.handle('diary:list', async () => {
   if (!fs.existsSync(dataDir)) return [];
-  const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.json'));
-  const entries = files.map(f => {
+  const files = fs.readdirSync(dataDir).filter(file => file.endsWith('.json'));
+  const entries = files.map((file) => {
     try {
-      const raw = fs.readFileSync(path.join(dataDir, f), 'utf-8');
+      const raw = fs.readFileSync(path.join(dataDir, file), 'utf-8');
       const data = JSON.parse(raw);
       return {
         date: data.date,
-        preview: data.content.replace(/[#*_~`>\-\[\]]/g, '').trim().substring(0, 60),
+        preview: buildDiaryPreview(data.content),
         updatedAt: data.updatedAt
       };
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   }).filter(Boolean);
+
   return entries.sort((a, b) => b.date.localeCompare(a.date));
 });
 
 ipcMain.handle('diary:delete', async (_, date) => {
   const filePath = getDiaryFilePath(date);
-  if (fs.existsSync(filePath)) { fs.unlinkSync(filePath); return true; }
-  return false;
+  if (!fs.existsSync(filePath)) return false;
+  fs.unlinkSync(filePath);
+  return true;
 });
 
-ipcMain.handle('diary:export', async (_, date) => {
-  const diary = loadDiaryFromDisk(date);
-  if (!diary) {
+ipcMain.handle('diary:export', async (_, dates) => {
+  const requestedDates = Array.isArray(dates) ? dates : [dates];
+  const normalizedDates = [...new Set(requestedDates.filter(Boolean))].sort((a, b) => b.localeCompare(a));
+  const diaries = normalizedDates.map((date) => loadDiaryFromDisk(date)).filter(Boolean);
+
+  if (!diaries.length) {
     return { success: false, message: '未找到可导出的日记。' };
   }
 
-  const result = await dialog.showSaveDialog(mainWindow, {
+  const defaultName = diaries.length === 1
+    ? `autoral-diary-${diaries[0].date}.${exportFileExtension}`
+    : `autoral-diaries-${new Date().toISOString().slice(0, 10)}.${exportFileExtension}`;
+
+  const ownerWindow = exportWindow && !exportWindow.isDestroyed() ? exportWindow : mainWindow;
+  const result = await dialog.showSaveDialog(ownerWindow, {
     title: '导出日记',
-    defaultPath: `autoral-diary-${date}.${exportFileExtension}`,
+    defaultPath: defaultName,
     filters: [
       { name: 'Autoral Diary Export', extensions: [exportFileExtension] },
       { name: 'JSON', extensions: ['json'] },
@@ -207,11 +254,11 @@ ipcMain.handle('diary:export', async (_, date) => {
     app: 'autoral-diary',
     formatVersion: 1,
     exportedAt: new Date().toISOString(),
-    diaries: [diary],
+    diaries,
   };
 
   fs.writeFileSync(result.filePath, JSON.stringify(payload, null, 2), 'utf-8');
-  return { success: true, filePath: result.filePath, count: 1 };
+  return { success: true, filePath: result.filePath, count: diaries.length };
 });
 
 ipcMain.handle('diary:import', async () => {
@@ -231,30 +278,33 @@ ipcMain.handle('diary:import', async () => {
     const filePath = result.filePaths[0];
     const parsed = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     const rawDiaries = Array.isArray(parsed?.diaries) ? parsed.diaries : (parsed ? [parsed] : []);
-    const diaries = rawDiaries
-      .map(item => normalizeDiaryPayload(item, item?.date))
-      .filter(Boolean);
+    const diaries = rawDiaries.map((item) => normalizeDiaryPayload(item, item?.date)).filter(Boolean);
 
     if (!diaries.length) {
       return { success: false, message: '导入文件中没有有效的日记内容。' };
     }
 
     let imported = 0;
-    let overwritten = 0;
+    let appended = 0;
+
     for (const diary of diaries) {
-      if (fs.existsSync(getDiaryFilePath(diary.date))) overwritten++;
-      saveDiaryToDisk(diary.date, diary.content, diary.updatedAt);
-      imported++;
+      const existing = loadDiaryFromDisk(diary.date);
+      if (existing && existing.content.trim()) {
+        const merged = [existing.content.trimEnd(), '', '---', '', diary.content.trimStart()].join('\n');
+        saveDiaryToDisk(diary.date, merged, new Date().toISOString());
+        appended += 1;
+      } else {
+        saveDiaryToDisk(diary.date, diary.content, diary.updatedAt);
+      }
+      imported += 1;
     }
 
     return {
       success: true,
       filePath,
       imported,
-      overwritten,
-      latestDate: diaries
-        .map(item => item.date)
-        .sort((a, b) => b.localeCompare(a))[0],
+      appended,
+      latestDate: diaries.map((item) => item.date).sort((a, b) => b.localeCompare(a))[0],
     };
   } catch {
     return { success: false, message: '导入失败，文件格式无法识别。' };
@@ -264,6 +314,18 @@ ipcMain.handle('diary:import', async () => {
 ipcMain.handle('app:open-main', async () => {
   mainWindow.show();
   mainWindow.focus();
+});
+
+ipcMain.handle('app:open-export-window', async () => {
+  createExportWindow();
+  return true;
+});
+
+ipcMain.handle('app:close-export-window', async () => {
+  if (exportWindow && !exportWindow.isDestroyed()) {
+    exportWindow.close();
+  }
+  return true;
 });
 
 ipcMain.handle('widget:pick-bg', async () => {
@@ -276,7 +338,7 @@ ipcMain.handle('widget:pick-bg', async () => {
 
   const src = result.filePaths[0];
   const ext = path.extname(src).slice(1).toLowerCase();
-  const dest = path.join(app.getPath('userData'), 'widget-bg.' + ext);
+  const dest = path.join(app.getPath('userData'), `widget-bg.${ext}`);
   fs.copyFileSync(src, dest);
 
   const settingsPath = path.join(app.getPath('userData'), 'settings.json');
@@ -316,8 +378,6 @@ ipcMain.handle('widget:clear-bg', async () => {
   return true;
 });
 
-// ── Auto Updater ──
-
 function setupAutoUpdater() {
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
@@ -340,11 +400,8 @@ function setupAutoUpdater() {
   autoUpdater.on('error', () => {});
 
   setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 3000);
-
   setInterval(() => autoUpdater.checkForUpdates().catch(() => {}), 4 * 60 * 60 * 1000);
 }
-
-// ── App Lifecycle ──
 
 app.whenReady().then(() => {
   createWidgetWindow();
@@ -352,9 +409,8 @@ app.whenReady().then(() => {
   createTray();
 
   globalShortcut.register('CommandOrControl+Shift+D', () => {
-    if (widgetWindow.isVisible()) {
-      widgetWindow.hide();
-    } else {
+    if (widgetWindow.isVisible()) widgetWindow.hide();
+    else {
       widgetWindow.show();
       widgetWindow.focus();
     }
@@ -370,9 +426,15 @@ app.on('window-all-closed', () => {
 });
 
 app.on('activate', () => {
-  if (mainWindow) { mainWindow.show(); mainWindow.focus(); }
+  if (mainWindow) {
+    mainWindow.show();
+    mainWindow.focus();
+  }
 });
 
 app.on('second-instance', () => {
-  if (mainWindow) { mainWindow.show(); mainWindow.focus(); }
+  if (mainWindow) {
+    mainWindow.show();
+    mainWindow.focus();
+  }
 });

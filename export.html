@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>导出日记</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f6f6f8;
+  --panel: #ffffff;
+  --border: #e6e6ea;
+  --text-1: #1c1c1f;
+  --text-2: #676773;
+  --accent: #4a90d9;
+  --accent-light: #e8f0fc;
+}
+
+body {
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  background: radial-gradient(circle at top, #ffffff 0%, var(--bg) 70%);
+  color: var(--text-1);
+  min-height: 100vh;
+  padding: 18px;
+}
+
+.shell {
+  height: calc(100vh - 36px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.header {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px 20px 14px;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.toolbar {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.left-tools, .right-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search {
+  width: 220px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 13px;
+  outline: none;
+}
+
+.search:focus { border-color: var(--accent); }
+
+.ghost-btn, .primary-btn {
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ghost-btn {
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text-2);
+}
+
+.ghost-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.primary-btn {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.primary-btn:hover { filter: brightness(1.02); }
+.primary-btn:disabled, .ghost-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.selection {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.list {
+  flex: 1;
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 10px;
+}
+
+.group {
+  margin-bottom: 10px;
+}
+
+.group-title {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.row:hover { background: #f7faff; }
+.row input { margin-top: 3px; }
+
+.row-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.date {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.preview {
+  font-size: 12px;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.status {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.empty {
+  height: 100%;
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-2);
+  font-size: 14px;
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="header">
+    <div class="title">导出日记</div>
+    <div class="subtitle">勾选要带走的日期，也可以一键全选，最后只会导出成一个文件。</div>
+  </div>
+
+  <div class="toolbar">
+    <div class="left-tools">
+      <input class="search" id="searchInput" type="text" placeholder="搜索日期或内容...">
+      <button class="ghost-btn" id="selectAllBtn" type="button">全选</button>
+      <button class="ghost-btn" id="clearBtn" type="button">清空</button>
+    </div>
+    <div class="right-tools">
+      <span class="selection" id="selectionText">已选 0 篇</span>
+      <button class="ghost-btn" id="cancelBtn" type="button">关闭</button>
+      <button class="primary-btn" id="exportBtn" type="button" disabled>导出选中</button>
+    </div>
+  </div>
+
+  <div class="list" id="list"></div>
+
+  <div class="footer">
+    <span class="status" id="statusText"></span>
+  </div>
+</div>
+
+<script>
+let entries = [];
+let filteredEntries = [];
+const selectedDates = new Set();
+
+const $ = (id) => document.getElementById(id);
+const list = $('list');
+const searchInput = $('searchInput');
+const selectAllBtn = $('selectAllBtn');
+const clearBtn = $('clearBtn');
+const cancelBtn = $('cancelBtn');
+const exportBtn = $('exportBtn');
+const selectionText = $('selectionText');
+const statusText = $('statusText');
+
+function formatMonthCN(year, month) {
+  return `${year}年${month}月`;
+}
+
+function formatDateCN(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return `${y}年${m}月${d}日`;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text || '';
+  return div.innerHTML;
+}
+
+function updateSelectionText() {
+  selectionText.textContent = `已选 ${selectedDates.size} 篇`;
+  exportBtn.disabled = selectedDates.size === 0;
+}
+
+function applyFilter() {
+  const keyword = searchInput.value.trim();
+  filteredEntries = keyword
+    ? entries.filter((entry) => entry.date.includes(keyword) || entry.preview.includes(keyword))
+    : entries.slice();
+  renderList();
+}
+
+function renderList() {
+  list.innerHTML = '';
+  if (!filteredEntries.length) {
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = '没有可导出的日记';
+    list.appendChild(empty);
+    return;
+  }
+
+  const groups = {};
+  filteredEntries.forEach((entry) => {
+    const [year, month] = entry.date.split('-');
+    const key = `${year}-${month}`;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(entry);
+  });
+
+  Object.entries(groups).forEach(([key, items]) => {
+    const [year, month] = key.split('-').map(Number);
+    const group = document.createElement('div');
+    group.className = 'group';
+
+    const title = document.createElement('div');
+    title.className = 'group-title';
+    title.textContent = formatMonthCN(year, month);
+    group.appendChild(title);
+
+    items.forEach((entry) => {
+      const row = document.createElement('label');
+      row.className = 'row';
+      row.innerHTML = `
+        <input type="checkbox" ${selectedDates.has(entry.date) ? 'checked' : ''} data-date="${entry.date}">
+        <div class="row-main">
+          <div class="date">${formatDateCN(entry.date)}</div>
+          <div class="preview">${escapeHtml(entry.preview) || '空白记录'}</div>
+        </div>
+      `;
+      const checkbox = row.querySelector('input');
+      checkbox.addEventListener('change', () => {
+        if (checkbox.checked) selectedDates.add(entry.date);
+        else selectedDates.delete(entry.date);
+        updateSelectionText();
+      });
+      group.appendChild(row);
+    });
+
+    list.appendChild(group);
+  });
+}
+
+async function init() {
+  entries = await window.api.listDiaries();
+  filteredEntries = entries.slice();
+  renderList();
+  updateSelectionText();
+}
+
+searchInput.addEventListener('input', applyFilter);
+
+selectAllBtn.addEventListener('click', () => {
+  filteredEntries.forEach((entry) => selectedDates.add(entry.date));
+  renderList();
+  updateSelectionText();
+});
+
+clearBtn.addEventListener('click', () => {
+  selectedDates.clear();
+  renderList();
+  updateSelectionText();
+});
+
+cancelBtn.addEventListener('click', async () => {
+  await window.api.closeExportWindow();
+});
+
+exportBtn.addEventListener('click', async () => {
+  statusText.textContent = '正在导出...';
+  const result = await window.api.exportDiary([...selectedDates]);
+  if (result?.success) {
+    statusText.textContent = `已导出 ${result.count} 篇日记到 ${result.filePath}`;
+    setTimeout(() => window.api.closeExportWindow(), 500);
+    return;
+  }
+  if (!result?.canceled) {
+    statusText.textContent = result?.message || '导出失败';
+  } else {
+    statusText.textContent = '';
+  }
+});
+
+init();
+</script>
+</body>
+</html>

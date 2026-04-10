@@ -163,7 +163,6 @@ body {
   transform: translateY(-50%);
   color: var(--text-3);
   font-size: 14px;
-  pointer-events: none;
 }
 
 .search-input {
@@ -194,34 +193,6 @@ body {
   border-color: var(--accent);
   color: var(--accent);
   background: var(--accent-light);
-}
-
-.library-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  padding: 0 16px 12px;
-}
-
-.secondary-btn {
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg);
-  color: var(--text-2);
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.secondary-btn:hover:not(:disabled) {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-light);
-}
-
-.secondary-btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
 }
 
 .entry-list {
@@ -296,7 +267,7 @@ body {
 }
 
 .content-header {
-  padding: 20px 28px 14px;
+  padding: 18px 28px 14px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -314,6 +285,64 @@ body {
   margin-left: 8px;
   font-size: 14px;
   color: var(--text-3);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.transfer-wrap {
+  position: relative;
+}
+
+.header-btn {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text-2);
+  font-size: 12px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.header-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.transfer-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 150px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  padding: 6px;
+  display: none;
+  z-index: 20;
+}
+
+.transfer-menu.open { display: block; }
+
+.menu-btn {
+  width: 100%;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  padding: 9px 10px;
+  text-align: left;
+  color: var(--text-2);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.menu-btn:hover {
+  background: var(--sidebar-hover);
+  color: var(--text-1);
 }
 
 .mode-toggle {
@@ -482,7 +511,7 @@ body {
       <span>日记本</span>
     </div>
 
-    <button class="calendar-toggle" id="calToggle">
+    <button class="calendar-toggle" id="calToggle" type="button">
       <span>📅</span>
       <span id="calLabel">选择日期</span>
       <span class="arrow">▼</span>
@@ -503,12 +532,6 @@ body {
   </div>
 
   <button class="new-entry-btn" id="newEntryBtn" type="button">+ 今日新记录</button>
-
-  <div class="library-actions">
-    <button class="secondary-btn" id="importBtn" type="button">导入日记</button>
-    <button class="secondary-btn" id="exportBtn" type="button" disabled>导出当前</button>
-  </div>
-
   <div class="entry-list" id="entryList"></div>
 </aside>
 
@@ -518,9 +541,18 @@ body {
       <span class="content-date" id="contentDate">选择一篇日记</span>
       <span class="content-weekday" id="contentWeekday"></span>
     </div>
-    <div class="mode-toggle" id="modeToggle" style="display:none;">
-      <button class="active" data-mode="edit" type="button">编辑</button>
-      <button data-mode="preview" type="button">预览</button>
+    <div class="header-actions">
+      <div class="transfer-wrap">
+        <button class="header-btn" id="transferBtn" type="button">传输</button>
+        <div class="transfer-menu" id="transferMenu">
+          <button class="menu-btn" id="openExportBtn" type="button">导出日记</button>
+          <button class="menu-btn" id="importBtn" type="button">导入日记</button>
+        </div>
+      </div>
+      <div class="mode-toggle" id="modeToggle" style="display:none;">
+        <button class="active" data-mode="edit" type="button">编辑</button>
+        <button data-mode="preview" type="button">预览</button>
+      </div>
     </div>
   </div>
 
@@ -571,8 +603,10 @@ const calTitle = $('calTitle');
 const calLabel = $('calLabel');
 const searchInput = $('searchInput');
 const entryList = $('entryList');
+const transferBtn = $('transferBtn');
+const transferMenu = $('transferMenu');
+const openExportBtn = $('openExportBtn');
 const importBtn = $('importBtn');
-const exportBtn = $('exportBtn');
 const contentDate = $('contentDate');
 const contentWeekday = $('contentWeekday');
 const modeToggle = $('modeToggle');
@@ -621,27 +655,26 @@ function setStatus(message, type = '') {
   }
 }
 
-function updateActionButtons() {
-  exportBtn.disabled = !selectedDate;
-}
-
 function updateMainCharCount() {
   const len = mainEditor.value.replace(/\s/g, '').length;
   mainCharCount.textContent = `${len} 字`;
 }
 
 function formatDateDisplay(dateStr) {
-  const [y, m, d] = dateStr.split('-').map(Number);
+  const [, m, d] = dateStr.split('-').map(Number);
   const today = todayStr();
   const yesterday = (() => {
     const dt = new Date();
     dt.setDate(dt.getDate() - 1);
     return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
   })();
-
   if (dateStr === today) return `${m}月${d}日 · 今天`;
   if (dateStr === yesterday) return `${m}月${d}日 · 昨天`;
   return `${m}月${d}日`;
+}
+
+function closeTransferMenu() {
+  transferMenu.classList.remove('open');
 }
 
 function initCalendar() {
@@ -702,7 +735,6 @@ async function loadEntries() {
   entryDates = new Set(entries.map((entry) => entry.date));
   renderEntryList(searchInput.value);
   renderCalendar();
-  updateActionButtons();
 }
 
 function renderEntryList(filter = '') {
@@ -748,9 +780,7 @@ function renderEntryList(filter = '') {
         event.stopPropagation();
         if (!confirm(`确认删除 ${formatDateCN(entry.date)} 的日记吗？`)) return;
         await window.api.deleteDiary(entry.date);
-        if (selectedDate === entry.date) {
-          showEmpty();
-        }
+        if (selectedDate === entry.date) showEmpty();
         await loadEntries();
       });
 
@@ -770,7 +800,6 @@ function renderEntryList(filter = '') {
 
 async function selectDate(dateStr) {
   selectedDate = dateStr;
-  updateActionButtons();
   contentDate.textContent = formatDateCN(dateStr);
   contentWeekday.textContent = dateWeekday(dateStr);
   modeToggle.style.display = 'flex';
@@ -791,7 +820,6 @@ async function selectDate(dateStr) {
 
 function showEmpty() {
   selectedDate = null;
-  updateActionButtons();
   emptyState.style.display = 'flex';
   editorArea.style.display = 'none';
   previewArea.classList.remove('visible');
@@ -824,49 +852,31 @@ function setMode(mode) {
 async function saveCurrentDiary() {
   if (!selectedDate) return;
   const content = mainEditor.value;
-  setStatus('Saving...', 'saving');
+  setStatus('保存中...', 'saving');
   await window.api.saveDiary(selectedDate, content);
-  setStatus('Saved', 'saved');
-
-  if (!entryDates.has(selectedDate) && content.trim()) {
-    await loadEntries();
-    return;
-  }
+  setStatus('已保存', 'saved');
 
   const entry = entries.find((item) => item.date === selectedDate);
   if (entry) {
-    entry.preview = content.replace(/[#*_~`>\-[\]]/g, '').trim().substring(0, 60);
+    entry.preview = content.replace(/[#*_~`>\-\[\]]/g, '').trim().substring(0, 60);
     renderEntryList(searchInput.value);
   } else if (content.trim()) {
     await loadEntries();
   }
 }
 
-async function handleExportDiary() {
-  if (!selectedDate) return;
-  const result = await window.api.exportDiary(selectedDate);
-  if (result?.success) {
-    setStatus(`Exported to ${result.filePath}`, 'saved');
-    return;
-  }
-  if (!result?.canceled) {
-    setStatus(result?.message || 'Export failed', 'error');
-  }
-}
-
 async function handleImportDiary() {
+  closeTransferMenu();
   const result = await window.api.importDiary();
   if (result?.success) {
     await loadEntries();
-    if (result.latestDate) {
-      await selectDate(result.latestDate);
-    }
-    const overwriteText = result.overwritten ? `, overwritten ${result.overwritten}` : '';
-    setStatus(`Imported ${result.imported} diaries${overwriteText}`, 'saved');
+    if (result.latestDate) await selectDate(result.latestDate);
+    const appendText = result.appended ? `，其中 ${result.appended} 篇已追加到原日记末尾` : '';
+    setStatus(`已导入 ${result.imported} 篇日记${appendText}`, 'saved');
     return;
   }
   if (!result?.canceled) {
-    setStatus(result?.message || 'Import failed', 'error');
+    setStatus(result?.message || '导入失败', 'error');
   }
 }
 
@@ -902,6 +912,23 @@ calToggle.addEventListener('click', () => {
   calToggle.classList.toggle('open');
 });
 
+transferBtn.addEventListener('click', () => {
+  transferMenu.classList.toggle('open');
+});
+
+openExportBtn.addEventListener('click', async () => {
+  closeTransferMenu();
+  await window.api.openExportWindow();
+});
+
+importBtn.addEventListener('click', handleImportDiary);
+
+document.addEventListener('click', (event) => {
+  if (!event.target.closest('.transfer-wrap')) {
+    closeTransferMenu();
+  }
+});
+
 modeToggle.addEventListener('click', (event) => {
   const button = event.target.closest('button[data-mode]');
   if (button) setMode(button.dataset.mode);
@@ -919,8 +946,6 @@ searchInput.addEventListener('input', () => {
 });
 
 $('newEntryBtn').addEventListener('click', () => selectDate(todayStr()));
-importBtn.addEventListener('click', handleImportDiary);
-exportBtn.addEventListener('click', handleExportDiary);
 
 document.addEventListener('keydown', (event) => {
   if (event.ctrlKey && event.key.toLowerCase() === 's') {
