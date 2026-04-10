@@ -1,6 +1,6 @@
 {
   "name": "autoral-diary",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "极简桌面日记小工具 - Minimalist Desktop Diary Widget",
   "main": "main.js",
   "scripts": {

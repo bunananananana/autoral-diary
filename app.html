@@ -5,24 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Autoral 日记本</title>
 <style>
-/* ── Reset & Base ── */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --sidebar-w: 260px;
+  --sidebar-w: 268px;
   --bg: #ffffff;
   --sidebar-bg: #f7f7f8;
-  --sidebar-hover: #ededef;
-  --sidebar-active: #e5e5e8;
-  --border: #e8e8eb;
-  --text-1: #1a1a1a;
-  --text-2: #555;
-  --text-3: #999;
+  --sidebar-hover: #efeff2;
+  --sidebar-active: #e7e7eb;
+  --border: #e6e6ea;
+  --text-1: #1c1c1f;
+  --text-2: #575760;
+  --text-3: #9a9aa3;
   --accent: #4a90d9;
   --accent-light: #e8f0fc;
-  --danger: #e05555;
+  --danger: #df5d5d;
   --line-h: 28px;
-  --radius: 8px;
+  --radius: 10px;
 }
 
 body {
@@ -34,7 +33,6 @@ body {
   display: flex;
 }
 
-/* ── Sidebar ── */
 .sidebar {
   width: var(--sidebar-w);
   min-width: var(--sidebar-w);
@@ -51,44 +49,41 @@ body {
 }
 
 .sidebar-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-1);
-  margin-bottom: 12px;
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-bottom: 12px;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .sidebar-title svg { opacity: 0.6; }
 
 .calendar-toggle {
   width: 100%;
-  padding: 7px 10px;
+  padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg);
-  font-size: 13px;
   color: var(--text-2);
+  font-size: 13px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
-  transition: border-color 0.15s;
+  gap: 8px;
 }
 
 .calendar-toggle:hover { border-color: var(--accent); }
 .calendar-toggle .arrow { margin-left: auto; font-size: 10px; transition: transform 0.2s; }
 .calendar-toggle.open .arrow { transform: rotate(180deg); }
 
-/* Calendar Dropdown */
 .calendar-dropdown {
   max-height: 0;
   overflow: hidden;
   transition: max-height 0.25s ease;
   background: var(--bg);
   border-radius: 0 0 var(--radius) var(--radius);
-  margin: 0 0 4px;
+  margin-top: 4px;
 }
 
 .calendar-dropdown.open { max-height: 280px; }
@@ -101,22 +96,17 @@ body {
 }
 
 .cal-nav button {
-  border: none;
-  background: transparent;
-  cursor: pointer;
   width: 28px;
   height: 28px;
+  border: none;
   border-radius: 6px;
-  font-size: 14px;
+  background: transparent;
   color: var(--text-2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
+  cursor: pointer;
 }
 
 .cal-nav button:hover { background: var(--sidebar-hover); }
-.cal-nav span { font-size: 13px; font-weight: 600; color: var(--text-1); }
+.cal-nav span { font-size: 13px; font-weight: 600; }
 
 .cal-grid {
   display: grid;
@@ -134,19 +124,19 @@ body {
 }
 
 .cal-grid .day {
+  position: relative;
   text-align: center;
   padding: 5px 0;
-  font-size: 12px;
   border-radius: 6px;
-  cursor: pointer;
+  font-size: 12px;
   color: var(--text-2);
-  position: relative;
-  transition: all 0.12s;
+  cursor: pointer;
 }
 
 .cal-grid .day:hover { background: var(--sidebar-hover); }
 .cal-grid .day.today { color: var(--accent); font-weight: 700; }
 .cal-grid .day.selected { background: var(--accent); color: #fff; }
+.cal-grid .day.other-month { color: #c8c8cf; cursor: default; }
 .cal-grid .day.has-entry::after {
   content: '';
   position: absolute;
@@ -159,28 +149,12 @@ body {
   background: var(--accent);
 }
 .cal-grid .day.selected.has-entry::after { background: #fff; }
-.cal-grid .day.other-month { color: #ccc; }
 
-/* Search */
 .search-wrap {
+  position: relative;
   padding: 8px 16px;
 }
 
-.search-input {
-  width: 100%;
-  padding: 7px 10px 7px 30px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-size: 13px;
-  outline: none;
-  background: var(--bg);
-  color: var(--text-1);
-  transition: border-color 0.15s;
-}
-
-.search-input:focus { border-color: var(--accent); }
-
-.search-wrap { position: relative; }
 .search-wrap::before {
   content: '⌕';
   position: absolute;
@@ -192,7 +166,19 @@ body {
   pointer-events: none;
 }
 
-/* New Entry Button */
+.search-input {
+  width: 100%;
+  padding: 8px 10px 8px 30px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text-1);
+  font-size: 13px;
+  outline: none;
+}
+
+.search-input:focus { border-color: var(--accent); }
+
 .new-entry-btn {
   margin: 4px 16px 8px;
   padding: 8px;
@@ -202,16 +188,42 @@ body {
   color: var(--text-3);
   font-size: 13px;
   cursor: pointer;
-  transition: all 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
 }
 
-.new-entry-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.new-entry-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-light);
+}
 
-/* Entry List */
+.library-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 0 16px 12px;
+}
+
+.secondary-btn {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text-2);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.secondary-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-light);
+}
+
+.secondary-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .entry-list {
   flex: 1;
   overflow-y: auto;
@@ -220,36 +232,32 @@ body {
 
 .entry-list::-webkit-scrollbar { width: 4px; }
 .entry-list::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
-.entry-list::-webkit-scrollbar-thumb:hover { background: #bbb; }
 
 .month-group { margin-bottom: 4px; }
 
 .month-label {
+  padding: 10px 10px 4px;
   font-size: 11px;
   font-weight: 600;
   color: var(--text-3);
-  padding: 10px 10px 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
 }
 
 .entry-item {
+  position: relative;
+  margin-bottom: 2px;
   padding: 10px 12px;
   border-radius: var(--radius);
   cursor: pointer;
-  transition: background 0.12s;
-  margin-bottom: 2px;
-  position: relative;
 }
 
 .entry-item:hover { background: var(--sidebar-hover); }
 .entry-item.active { background: var(--sidebar-active); }
 
 .entry-date {
+  margin-bottom: 2px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-1);
-  margin-bottom: 2px;
 }
 
 .entry-preview {
@@ -258,38 +266,33 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding-right: 28px;
 }
 
-.entry-item .delete-btn {
+.delete-btn {
   position: absolute;
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
-  opacity: 0;
+  width: 24px;
+  height: 24px;
   border: none;
+  border-radius: 5px;
   background: transparent;
   color: var(--text-3);
   cursor: pointer;
-  font-size: 14px;
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s;
+  opacity: 0;
 }
 
 .entry-item:hover .delete-btn { opacity: 1; }
-.entry-item .delete-btn:hover { background: rgba(224, 85, 85, 0.1); color: var(--danger); }
+.delete-btn:hover { background: rgba(223, 93, 93, 0.12); color: var(--danger); }
 
-/* ── Main Content ── */
 .content {
   flex: 1;
+  min-width: 0;
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  min-width: 0;
 }
 
 .content-header {
@@ -298,20 +301,19 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   flex-shrink: 0;
 }
 
 .content-date {
   font-size: 18px;
   font-weight: 700;
-  color: var(--text-1);
 }
 
 .content-weekday {
-  font-weight: 400;
-  color: var(--text-3);
-  font-size: 14px;
   margin-left: 8px;
+  font-size: 14px;
+  color: var(--text-3);
 }
 
 .mode-toggle {
@@ -326,17 +328,16 @@ body {
   padding: 5px 14px;
   border: none;
   border-radius: 5px;
-  font-size: 12px;
-  cursor: pointer;
   background: transparent;
   color: var(--text-3);
-  transition: all 0.15s;
+  font-size: 12px;
+  cursor: pointer;
 }
 
 .mode-toggle button.active {
   background: var(--bg);
   color: var(--text-1);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .content-body {
@@ -345,16 +346,16 @@ body {
   overflow: hidden;
 }
 
-/* Editor */
-.editor-area {
+.editor-area,
+.preview-area {
   position: absolute;
   inset: 0;
   padding: 20px 28px;
   overflow-y: auto;
 }
 
-.editor-area::-webkit-scrollbar { width: 6px; }
-.editor-area::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+.editor-area::-webkit-scrollbar,
+.preview-area::-webkit-scrollbar { width: 6px; }
 
 .editor-area textarea {
   width: 100%;
@@ -363,94 +364,75 @@ body {
   border: none;
   outline: none;
   resize: none;
+  background: transparent;
+  color: var(--text-1);
   font-family: "Cascadia Code", "Consolas", "Microsoft YaHei", monospace;
   font-size: 14px;
   line-height: var(--line-h);
-  color: var(--text-1);
   padding: 2px 0;
-  background: transparent;
   background-image: repeating-linear-gradient(
     transparent,
     transparent calc(var(--line-h) - 1px),
-    #ebebeb calc(var(--line-h) - 1px),
-    #ebebeb var(--line-h)
+    #ececf0 calc(var(--line-h) - 1px),
+    #ececf0 var(--line-h)
   );
   background-position-y: 4px;
 }
 
-.editor-area textarea::placeholder { color: #ccc; }
-
-/* Preview */
 .preview-area {
-  position: absolute;
-  inset: 0;
-  padding: 20px 28px;
-  overflow-y: auto;
   display: none;
   background-image: repeating-linear-gradient(
     transparent,
     transparent calc(var(--line-h) - 1px),
-    #efefef calc(var(--line-h) - 1px),
-    #efefef var(--line-h)
+    #f0f0f3 calc(var(--line-h) - 1px),
+    #f0f0f3 var(--line-h)
   );
   background-position-y: 4px;
 }
 
-.preview-area::-webkit-scrollbar { width: 6px; }
-.preview-area::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
-
 .preview-area.visible { display: block; }
 .editor-area.hidden { display: none; }
 
-/* Markdown Rendered Styles */
-.preview-area h1 { font-size: 22px; font-weight: 700; margin: 8px 0; color: var(--text-1); line-height: calc(var(--line-h) * 1.5); }
-.preview-area h2 { font-size: 18px; font-weight: 700; margin: 6px 0; color: var(--text-1); line-height: calc(var(--line-h) * 1.2); }
-.preview-area h3 { font-size: 15px; font-weight: 600; margin: 4px 0; color: var(--text-2); }
-.preview-area p { font-size: 14px; line-height: var(--line-h); margin-bottom: 4px; }
-.preview-area ul, .preview-area ol { padding-left: 20px; margin-bottom: 4px; }
+.preview-area h1 { font-size: 22px; margin: 8px 0; line-height: 1.5; }
+.preview-area h2 { font-size: 18px; margin: 6px 0; line-height: 1.4; }
+.preview-area h3 { font-size: 15px; margin: 4px 0; color: var(--text-2); }
+.preview-area p,
 .preview-area li { font-size: 14px; line-height: var(--line-h); }
+.preview-area ul,
+.preview-area ol { padding-left: 20px; margin-bottom: 4px; }
 .preview-area blockquote {
-  border-left: 3px solid var(--accent);
-  padding-left: 14px;
-  color: var(--text-2);
   margin: 8px 0;
-  font-style: italic;
+  padding-left: 14px;
+  border-left: 3px solid var(--accent);
+  color: var(--text-2);
 }
 .preview-area code {
-  background: #f4f4f5;
   padding: 2px 6px;
+  background: #f4f4f6;
   border-radius: 4px;
-  font-size: 13px;
-  font-family: "Cascadia Code", "Consolas", monospace;
 }
 .preview-area pre {
-  background: #f8f8f9;
   padding: 12px 16px;
+  background: #f8f8fa;
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow-x: auto;
   margin: 8px 0;
-  border: 1px solid var(--border);
 }
 .preview-area pre code { background: none; padding: 0; }
-.preview-area hr {
-  border: none;
-  border-top: 2px solid var(--border);
-  margin: 12px 0;
-}
+.preview-area hr { border: none; border-top: 2px solid var(--border); margin: 12px 0; }
 .preview-area a { color: var(--accent); text-decoration: none; }
-.preview-area a:hover { text-decoration: underline; }
-.preview-area strong { font-weight: 600; }
 .preview-area img { max-width: 100%; border-radius: var(--radius); }
-.preview-area table { border-collapse: collapse; width: 100%; margin: 8px 0; }
-.preview-area th, .preview-area td {
+.preview-area table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+.preview-area th,
+.preview-area td {
   border: 1px solid var(--border);
   padding: 6px 10px;
-  font-size: 13px;
   text-align: left;
+  font-size: 13px;
 }
-.preview-area th { background: var(--sidebar-bg); font-weight: 600; }
+.preview-area th { background: var(--sidebar-bg); }
 
-/* Content Footer */
 .content-footer {
   padding: 8px 28px;
   border-top: 1px solid var(--border);
@@ -462,54 +444,55 @@ body {
   flex-shrink: 0;
 }
 
-.save-indicator { transition: color 0.3s; }
 .save-indicator.saving { color: #e0a030; }
 .save-indicator.saved { color: #7cc07c; }
+.save-indicator.error { color: var(--danger); }
 
-/* Empty State */
 .empty-state {
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  color: var(--text-3);
   gap: 12px;
+  color: var(--text-3);
 }
 
-.empty-state .icon { font-size: 48px; opacity: 0.3; }
-.empty-state p { font-size: 14px; }
+.empty-state .icon {
+  font-size: 46px;
+  opacity: 0.3;
+}
 
-/* ── Responsive ── */
 @media (max-width: 750px) {
-  .sidebar { width: 200px; min-width: 200px; }
+  .sidebar {
+    width: 210px;
+    min-width: 210px;
+  }
 }
 </style>
 </head>
 <body>
-
-<!-- Sidebar -->
 <aside class="sidebar">
   <div class="sidebar-header">
     <div class="sidebar-title">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
       </svg>
-      日记本
+      <span>日记本</span>
     </div>
 
     <button class="calendar-toggle" id="calToggle">
       <span>📅</span>
       <span id="calLabel">选择日期</span>
-      <span class="arrow">▾</span>
+      <span class="arrow">▼</span>
     </button>
 
     <div class="calendar-dropdown" id="calDropdown">
       <div class="cal-nav">
-        <button id="calPrev">◂</button>
+        <button id="calPrev" type="button">◀</button>
         <span id="calTitle"></span>
-        <button id="calNext">▸</button>
+        <button id="calNext" type="button">▶</button>
       </div>
       <div class="cal-grid" id="calGrid"></div>
     </div>
@@ -519,32 +502,42 @@ body {
     <input type="text" class="search-input" id="searchInput" placeholder="搜索日记...">
   </div>
 
-  <button class="new-entry-btn" id="newEntryBtn">+ 今日新记录</button>
+  <button class="new-entry-btn" id="newEntryBtn" type="button">+ 今日新记录</button>
+
+  <div class="library-actions">
+    <button class="secondary-btn" id="importBtn" type="button">导入日记</button>
+    <button class="secondary-btn" id="exportBtn" type="button" disabled>导出当前</button>
+  </div>
 
   <div class="entry-list" id="entryList"></div>
 </aside>
 
-<!-- Main Content -->
 <main class="content">
-  <div class="content-header" id="contentHeader">
+  <div class="content-header">
     <div>
       <span class="content-date" id="contentDate">选择一篇日记</span>
       <span class="content-weekday" id="contentWeekday"></span>
     </div>
     <div class="mode-toggle" id="modeToggle" style="display:none;">
-      <button class="active" data-mode="edit">编辑</button>
-      <button data-mode="preview">预览</button>
+      <button class="active" data-mode="edit" type="button">编辑</button>
+      <button data-mode="preview" type="button">预览</button>
     </div>
   </div>
 
-  <div class="content-body" id="contentBody">
+  <div class="content-body">
     <div class="empty-state" id="emptyState">
-      <div class="icon">📖</div>
-      <p>选择左侧日记或创建新记录</p>
+      <div class="icon">📝</div>
+      <p>从左侧选择日记，或创建一篇新的记录</p>
     </div>
 
     <div class="editor-area" id="editorArea" style="display:none;">
-      <textarea id="mainEditor" placeholder="开始书写今天的日记...&#10;&#10;支持 Markdown 语法：&#10;# 标题&#10;**粗体** *斜体*&#10;- 列表项&#10;--- 分隔线"></textarea>
+      <textarea id="mainEditor" placeholder="开始写今天的日记...
+
+支持 Markdown 语法：
+# 标题
+**粗体** *斜体*
+- 列表项
+--- 分隔线"></textarea>
     </div>
 
     <div class="preview-area" id="previewArea"></div>
@@ -557,19 +550,20 @@ body {
 </main>
 
 <script>
-// ── State ──
 let entries = [];
 let selectedDate = null;
 let currentMode = 'edit';
-let calYear, calMonth;
+let calYear;
+let calMonth;
 let entryDates = new Set();
 let saveTimer = null;
+let searchTimer = null;
+let lastKnownDate = todayStr();
 
 const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
 const weekdaysFull = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
 
-// ── DOM Refs ──
-const $ = id => document.getElementById(id);
+const $ = (id) => document.getElementById(id);
 const calToggle = $('calToggle');
 const calDropdown = $('calDropdown');
 const calGrid = $('calGrid');
@@ -577,6 +571,8 @@ const calTitle = $('calTitle');
 const calLabel = $('calLabel');
 const searchInput = $('searchInput');
 const entryList = $('entryList');
+const importBtn = $('importBtn');
+const exportBtn = $('exportBtn');
 const contentDate = $('contentDate');
 const contentWeekday = $('contentWeekday');
 const modeToggle = $('modeToggle');
@@ -588,26 +584,66 @@ const contentFooter = $('contentFooter');
 const mainSaveStatus = $('mainSaveStatus');
 const mainCharCount = $('mainCharCount');
 
-// ── Utilities ──
 function todayStr() {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function formatDateCN(s) {
-  const [y, m, d] = s.split('-').map(Number);
+function formatDateCN(value) {
+  const [y, m, d] = value.split('-').map(Number);
   return `${y}年${m}月${d}日`;
 }
 
-function dateWeekday(s) {
-  return weekdaysFull[new Date(s + 'T00:00:00').getDay()];
+function dateWeekday(value) {
+  return weekdaysFull[new Date(`${value}T00:00:00`).getDay()];
 }
 
-function formatMonthCN(y, m) {
-  return `${y}年${m}月`;
+function formatMonthCN(year, month) {
+  return `${year}年${month}月`;
 }
 
-// ── Calendar ──
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text || '';
+  return div.innerHTML;
+}
+
+function setStatus(message, type = '') {
+  mainSaveStatus.textContent = message;
+  mainSaveStatus.className = `save-indicator${type ? ` ${type}` : ''}`;
+  if (message && type !== 'saving') {
+    setTimeout(() => {
+      if (mainSaveStatus.textContent === message) {
+        mainSaveStatus.textContent = '';
+        mainSaveStatus.className = 'save-indicator';
+      }
+    }, 2500);
+  }
+}
+
+function updateActionButtons() {
+  exportBtn.disabled = !selectedDate;
+}
+
+function updateMainCharCount() {
+  const len = mainEditor.value.replace(/\s/g, '').length;
+  mainCharCount.textContent = `${len} 字`;
+}
+
+function formatDateDisplay(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const today = todayStr();
+  const yesterday = (() => {
+    const dt = new Date();
+    dt.setDate(dt.getDate() - 1);
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+  })();
+
+  if (dateStr === today) return `${m}月${d}日 · 今天`;
+  if (dateStr === yesterday) return `${m}月${d}日 · 昨天`;
+  return `${m}月${d}日`;
+}
+
 function initCalendar() {
   const now = new Date();
   calYear = now.getFullYear();
@@ -617,12 +653,13 @@ function initCalendar() {
 
 function renderCalendar() {
   calTitle.textContent = formatMonthCN(calYear, calMonth + 1);
+  calLabel.textContent = selectedDate ? formatDateCN(selectedDate) : '选择日期';
   calGrid.innerHTML = '';
 
-  weekdays.forEach(d => {
+  weekdays.forEach((day) => {
     const el = document.createElement('div');
     el.className = 'day-header';
-    el.textContent = d;
+    el.textContent = day;
     calGrid.appendChild(el);
   });
 
@@ -631,18 +668,18 @@ function renderCalendar() {
   const prevMonthDays = new Date(calYear, calMonth, 0).getDate();
   const today = todayStr();
 
-  for (let i = 0; i < firstDay; i++) {
+  for (let i = 0; i < firstDay; i += 1) {
     const el = document.createElement('div');
     el.className = 'day other-month';
     el.textContent = prevMonthDays - firstDay + 1 + i;
     calGrid.appendChild(el);
   }
 
-  for (let d = 1; d <= daysInMonth; d++) {
+  for (let day = 1; day <= daysInMonth; day += 1) {
     const el = document.createElement('div');
-    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     el.className = 'day';
-    el.textContent = d;
+    el.textContent = day;
     if (dateStr === today) el.classList.add('today');
     if (dateStr === selectedDate) el.classList.add('selected');
     if (entryDates.has(dateStr)) el.classList.add('has-entry');
@@ -651,8 +688,8 @@ function renderCalendar() {
   }
 
   const totalCells = firstDay + daysInMonth;
-  const remaining = (7 - totalCells % 7) % 7;
-  for (let i = 1; i <= remaining; i++) {
+  const remaining = (7 - (totalCells % 7)) % 7;
+  for (let i = 1; i <= remaining; i += 1) {
     const el = document.createElement('div');
     el.className = 'day other-month';
     el.textContent = i;
@@ -660,114 +697,80 @@ function renderCalendar() {
   }
 }
 
-$('calPrev').addEventListener('click', () => {
-  calMonth--;
-  if (calMonth < 0) { calMonth = 11; calYear--; }
-  renderCalendar();
-});
-
-$('calNext').addEventListener('click', () => {
-  calMonth++;
-  if (calMonth > 11) { calMonth = 0; calYear++; }
-  renderCalendar();
-});
-
-calToggle.addEventListener('click', () => {
-  calDropdown.classList.toggle('open');
-  calToggle.classList.toggle('open');
-});
-
-// ── Entry List ──
 async function loadEntries() {
   entries = await window.api.listDiaries();
-  entryDates = new Set(entries.map(e => e.date));
-  renderEntryList();
+  entryDates = new Set(entries.map((entry) => entry.date));
+  renderEntryList(searchInput.value);
   renderCalendar();
+  updateActionButtons();
 }
 
 function renderEntryList(filter = '') {
   entryList.innerHTML = '';
-  const filtered = filter
-    ? entries.filter(e => e.preview.includes(filter) || e.date.includes(filter))
+  const keyword = filter.trim();
+  const filtered = keyword
+    ? entries.filter((entry) => entry.preview.includes(keyword) || entry.date.includes(keyword))
     : entries;
 
   const groups = {};
-  filtered.forEach(e => {
-    const [y, m] = e.date.split('-');
-    const key = `${y}-${m}`;
+  filtered.forEach((entry) => {
+    const [year, month] = entry.date.split('-');
+    const key = `${year}-${month}`;
     if (!groups[key]) groups[key] = [];
-    groups[key].push(e);
+    groups[key].push(entry);
   });
 
   Object.entries(groups).forEach(([key, items]) => {
-    const [y, m] = key.split('-');
+    const [year, month] = key.split('-').map(Number);
     const group = document.createElement('div');
     group.className = 'month-group';
 
     const label = document.createElement('div');
     label.className = 'month-label';
-    label.textContent = formatMonthCN(parseInt(y), parseInt(m));
+    label.textContent = formatMonthCN(year, month);
     group.appendChild(label);
 
-    items.forEach(e => {
+    items.forEach((entry) => {
       const item = document.createElement('div');
-      item.className = 'entry-item' + (e.date === selectedDate ? ' active' : '');
+      item.className = `entry-item${entry.date === selectedDate ? ' active' : ''}`;
       item.innerHTML = `
-        <div class="entry-date">${formatDateDisplay(e.date)}</div>
-        <div class="entry-preview">${escapeHtml(e.preview) || '空白记录'}</div>
-        <button class="delete-btn" title="删除">✕</button>
+        <div class="entry-date">${formatDateDisplay(entry.date)}</div>
+        <div class="entry-preview">${escapeHtml(entry.preview) || '空白记录'}</div>
+        <button class="delete-btn" type="button" title="删除">✕</button>
       `;
-      item.addEventListener('click', (ev) => {
-        if (ev.target.classList.contains('delete-btn')) return;
-        selectDate(e.date);
+
+      item.addEventListener('click', (event) => {
+        if (event.target.classList.contains('delete-btn')) return;
+        selectDate(entry.date);
       });
-      item.querySelector('.delete-btn').addEventListener('click', async (ev) => {
-        ev.stopPropagation();
-        if (confirm(`确认删除 ${formatDateCN(e.date)} 的日记？`)) {
-          await window.api.deleteDiary(e.date);
-          if (selectedDate === e.date) {
-            selectedDate = null;
-            showEmpty();
-          }
-          loadEntries();
+
+      item.querySelector('.delete-btn').addEventListener('click', async (event) => {
+        event.stopPropagation();
+        if (!confirm(`确认删除 ${formatDateCN(entry.date)} 的日记吗？`)) return;
+        await window.api.deleteDiary(entry.date);
+        if (selectedDate === entry.date) {
+          showEmpty();
         }
+        await loadEntries();
       });
+
       group.appendChild(item);
     });
 
     entryList.appendChild(group);
   });
 
-  if (filtered.length === 0) {
+  if (!filtered.length) {
     const empty = document.createElement('div');
     empty.style.cssText = 'text-align:center;color:#bbb;padding:30px 0;font-size:13px;';
-    empty.textContent = filter ? '没有匹配的记录' : '还没有日记记录';
+    empty.textContent = keyword ? '没有匹配的记录' : '还没有日记记录';
     entryList.appendChild(empty);
   }
 }
 
-function formatDateDisplay(dateStr) {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const today = todayStr();
-  const yesterday = (() => {
-    const dt = new Date(); dt.setDate(dt.getDate() - 1);
-    return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
-  })();
-  if (dateStr === today) return `${m}月${d}日 · 今天`;
-  if (dateStr === yesterday) return `${m}月${d}日 · 昨天`;
-  return `${m}月${d}日`;
-}
-
-function escapeHtml(s) {
-  const div = document.createElement('div');
-  div.textContent = s;
-  return div.innerHTML;
-}
-
-// ── Select & Load Date ──
 async function selectDate(dateStr) {
   selectedDate = dateStr;
-
+  updateActionButtons();
   contentDate.textContent = formatDateCN(dateStr);
   contentWeekday.textContent = dateWeekday(dateStr);
   modeToggle.style.display = 'flex';
@@ -778,7 +781,7 @@ async function selectDate(dateStr) {
   mainEditor.value = data ? data.content : '';
   updateMainCharCount();
 
-  const hasContent = data && data.content && data.content.trim();
+  const hasContent = Boolean(data && data.content && data.content.trim());
   setMode(hasContent ? 'preview' : 'edit');
   if (!hasContent) mainEditor.focus();
 
@@ -787,6 +790,8 @@ async function selectDate(dateStr) {
 }
 
 function showEmpty() {
+  selectedDate = null;
+  updateActionButtons();
   emptyState.style.display = 'flex';
   editorArea.style.display = 'none';
   previewArea.classList.remove('visible');
@@ -794,14 +799,16 @@ function showEmpty() {
   contentFooter.style.display = 'none';
   contentDate.textContent = '选择一篇日记';
   contentWeekday.textContent = '';
+  renderEntryList(searchInput.value);
+  renderCalendar();
 }
 
-// ── Mode Toggle ──
 function setMode(mode) {
   currentMode = mode;
-  modeToggle.querySelectorAll('button').forEach(b => {
-    b.classList.toggle('active', b.dataset.mode === mode);
+  modeToggle.querySelectorAll('button').forEach((button) => {
+    button.classList.toggle('active', button.dataset.mode === mode);
   });
+
   if (mode === 'edit') {
     editorArea.classList.remove('hidden');
     editorArea.style.display = 'block';
@@ -814,70 +821,54 @@ function setMode(mode) {
   }
 }
 
-modeToggle.addEventListener('click', (e) => {
-  const btn = e.target.closest('button[data-mode]');
-  if (btn) setMode(btn.dataset.mode);
-});
-
-// ── Auto Save ──
-mainEditor.addEventListener('input', () => {
-  updateMainCharCount();
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveCurrentDiary, 600);
-});
-
 async function saveCurrentDiary() {
   if (!selectedDate) return;
   const content = mainEditor.value;
-  mainSaveStatus.textContent = '保存中...';
-  mainSaveStatus.className = 'save-indicator saving';
+  setStatus('Saving...', 'saving');
   await window.api.saveDiary(selectedDate, content);
-  mainSaveStatus.textContent = '✓ 已保存';
-  mainSaveStatus.className = 'save-indicator saved';
-  setTimeout(() => { mainSaveStatus.textContent = ''; mainSaveStatus.className = 'save-indicator'; }, 2000);
+  setStatus('Saved', 'saved');
 
   if (!entryDates.has(selectedDate) && content.trim()) {
-    loadEntries();
-  } else {
-    const entry = entries.find(e => e.date === selectedDate);
-    if (entry) {
-      entry.preview = content.replace(/[#*_~`>\-\[\]]/g, '').trim().substring(0, 60);
-      renderEntryList(searchInput.value);
-    } else if (content.trim()) {
-      loadEntries();
+    await loadEntries();
+    return;
+  }
+
+  const entry = entries.find((item) => item.date === selectedDate);
+  if (entry) {
+    entry.preview = content.replace(/[#*_~`>\-[\]]/g, '').trim().substring(0, 60);
+    renderEntryList(searchInput.value);
+  } else if (content.trim()) {
+    await loadEntries();
+  }
+}
+
+async function handleExportDiary() {
+  if (!selectedDate) return;
+  const result = await window.api.exportDiary(selectedDate);
+  if (result?.success) {
+    setStatus(`Exported to ${result.filePath}`, 'saved');
+    return;
+  }
+  if (!result?.canceled) {
+    setStatus(result?.message || 'Export failed', 'error');
+  }
+}
+
+async function handleImportDiary() {
+  const result = await window.api.importDiary();
+  if (result?.success) {
+    await loadEntries();
+    if (result.latestDate) {
+      await selectDate(result.latestDate);
     }
+    const overwriteText = result.overwritten ? `, overwritten ${result.overwritten}` : '';
+    setStatus(`Imported ${result.imported} diaries${overwriteText}`, 'saved');
+    return;
+  }
+  if (!result?.canceled) {
+    setStatus(result?.message || 'Import failed', 'error');
   }
 }
-
-function updateMainCharCount() {
-  const len = mainEditor.value.replace(/\s/g, '').length;
-  mainCharCount.textContent = `${len} 字`;
-}
-
-// ── Search ──
-let searchTimer;
-searchInput.addEventListener('input', () => {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => renderEntryList(searchInput.value), 200);
-});
-
-// ── New Entry ──
-$('newEntryBtn').addEventListener('click', () => selectDate(todayStr()));
-
-// ── Keyboard Shortcuts ──
-document.addEventListener('keydown', (e) => {
-  if (e.ctrlKey && e.key === 's') {
-    e.preventDefault();
-    saveCurrentDiary();
-  }
-  if (e.ctrlKey && e.key === 'p') {
-    e.preventDefault();
-    setMode(currentMode === 'edit' ? 'preview' : 'edit');
-  }
-});
-
-// ── Date Change Detection ──
-let lastKnownDate = todayStr();
 
 function checkDateChange() {
   const now = todayStr();
@@ -888,13 +879,66 @@ function checkDateChange() {
   }
 }
 
-setInterval(checkDateChange, 30000);
+$('calPrev').addEventListener('click', () => {
+  calMonth -= 1;
+  if (calMonth < 0) {
+    calMonth = 11;
+    calYear -= 1;
+  }
+  renderCalendar();
+});
+
+$('calNext').addEventListener('click', () => {
+  calMonth += 1;
+  if (calMonth > 11) {
+    calMonth = 0;
+    calYear += 1;
+  }
+  renderCalendar();
+});
+
+calToggle.addEventListener('click', () => {
+  calDropdown.classList.toggle('open');
+  calToggle.classList.toggle('open');
+});
+
+modeToggle.addEventListener('click', (event) => {
+  const button = event.target.closest('button[data-mode]');
+  if (button) setMode(button.dataset.mode);
+});
+
+mainEditor.addEventListener('input', () => {
+  updateMainCharCount();
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveCurrentDiary, 600);
+});
+
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => renderEntryList(searchInput.value), 200);
+});
+
+$('newEntryBtn').addEventListener('click', () => selectDate(todayStr()));
+importBtn.addEventListener('click', handleImportDiary);
+exportBtn.addEventListener('click', handleExportDiary);
+
+document.addEventListener('keydown', (event) => {
+  if (event.ctrlKey && event.key.toLowerCase() === 's') {
+    event.preventDefault();
+    saveCurrentDiary();
+  }
+  if (event.ctrlKey && event.key.toLowerCase() === 'p') {
+    event.preventDefault();
+    setMode(currentMode === 'edit' ? 'preview' : 'edit');
+  }
+});
 
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) checkDateChange();
 });
 
-// ── Init ──
+setInterval(checkDateChange, 30000);
+
 initCalendar();
 loadEntries();
 </script>

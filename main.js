@@ -8,9 +8,44 @@ if (!gotTheLock) { app.quit(); }
 
 let widgetWindow, mainWindow, tray;
 const dataDir = path.join(app.getPath('userData'), 'diaries');
+const exportFileExtension = 'autoral-diary';
 
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
+}
+
+function getDiaryFilePath(date) {
+  return path.join(dataDir, `${date}.json`);
+}
+
+function normalizeDiaryPayload(raw, fallbackDate) {
+  if (!raw || typeof raw !== 'object') return null;
+  const date = typeof raw.date === 'string' && raw.date ? raw.date : fallbackDate;
+  const content = typeof raw.content === 'string' ? raw.content : '';
+  if (!date) return null;
+  return {
+    date,
+    content,
+    updatedAt: typeof raw.updatedAt === 'string' && raw.updatedAt ? raw.updatedAt : new Date().toISOString(),
+  };
+}
+
+function loadDiaryFromDisk(date) {
+  const filePath = getDiaryFilePath(date);
+  if (!fs.existsSync(filePath)) return null;
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    return normalizeDiaryPayload(parsed, date);
+  } catch {
+    return null;
+  }
+}
+
+function saveDiaryToDisk(date, content, updatedAt = new Date().toISOString()) {
+  const filePath = getDiaryFilePath(date);
+  const data = { date, content, updatedAt };
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+  return data;
 }
 
 function createTrayIcon() {
@@ -119,18 +154,11 @@ function createTray() {
 // ── IPC Handlers ──
 
 ipcMain.handle('diary:save', async (_, date, content) => {
-  const filePath = path.join(dataDir, `${date}.json`);
-  const data = { date, content, updatedAt: new Date().toISOString() };
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
-  return data;
+  return saveDiaryToDisk(date, content);
 });
 
 ipcMain.handle('diary:load', async (_, date) => {
-  const filePath = path.join(dataDir, `${date}.json`);
-  if (fs.existsSync(filePath)) {
-    return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-  }
-  return null;
+  return loadDiaryFromDisk(date);
 });
 
 ipcMain.handle('diary:list', async () => {
@@ -151,9 +179,86 @@ ipcMain.handle('diary:list', async () => {
 });
 
 ipcMain.handle('diary:delete', async (_, date) => {
-  const filePath = path.join(dataDir, `${date}.json`);
+  const filePath = getDiaryFilePath(date);
   if (fs.existsSync(filePath)) { fs.unlinkSync(filePath); return true; }
   return false;
+});
+
+ipcMain.handle('diary:export', async (_, date) => {
+  const diary = loadDiaryFromDisk(date);
+  if (!diary) {
+    return { success: false, message: '未找到可导出的日记。' };
+  }
+
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: '导出日记',
+    defaultPath: `autoral-diary-${date}.${exportFileExtension}`,
+    filters: [
+      { name: 'Autoral Diary Export', extensions: [exportFileExtension] },
+      { name: 'JSON', extensions: ['json'] },
+    ],
+  });
+
+  if (result.canceled || !result.filePath) {
+    return { success: false, canceled: true };
+  }
+
+  const payload = {
+    app: 'autoral-diary',
+    formatVersion: 1,
+    exportedAt: new Date().toISOString(),
+    diaries: [diary],
+  };
+
+  fs.writeFileSync(result.filePath, JSON.stringify(payload, null, 2), 'utf-8');
+  return { success: true, filePath: result.filePath, count: 1 };
+});
+
+ipcMain.handle('diary:import', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: '导入日记',
+    properties: ['openFile'],
+    filters: [
+      { name: 'Autoral Diary Export', extensions: [exportFileExtension, 'json'] },
+    ],
+  });
+
+  if (result.canceled || !result.filePaths.length) {
+    return { success: false, canceled: true };
+  }
+
+  try {
+    const filePath = result.filePaths[0];
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    const rawDiaries = Array.isArray(parsed?.diaries) ? parsed.diaries : (parsed ? [parsed] : []);
+    const diaries = rawDiaries
+      .map(item => normalizeDiaryPayload(item, item?.date))
+      .filter(Boolean);
+
+    if (!diaries.length) {
+      return { success: false, message: '导入文件中没有有效的日记内容。' };
+    }
+
+    let imported = 0;
+    let overwritten = 0;
+    for (const diary of diaries) {
+      if (fs.existsSync(getDiaryFilePath(diary.date))) overwritten++;
+      saveDiaryToDisk(diary.date, diary.content, diary.updatedAt);
+      imported++;
+    }
+
+    return {
+      success: true,
+      filePath,
+      imported,
+      overwritten,
+      latestDate: diaries
+        .map(item => item.date)
+        .sort((a, b) => b.localeCompare(a))[0],
+    };
+  } catch {
+    return { success: false, message: '导入失败，文件格式无法识别。' };
+  }
 });
 
 ipcMain.handle('app:open-main', async () => {

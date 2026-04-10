@@ -26,6 +26,8 @@ contextBridge.exposeInMainWorld('api', {
   loadDiary: (date) => ipcRenderer.invoke('diary:load', date),
   listDiaries: () => ipcRenderer.invoke('diary:list'),
   deleteDiary: (date) => ipcRenderer.invoke('diary:delete', date),
+  exportDiary: (date) => ipcRenderer.invoke('diary:export', date),
+  importDiary: () => ipcRenderer.invoke('diary:import'),
   openMain: () => ipcRenderer.invoke('app:open-main'),
   pickWidgetBg: () => ipcRenderer.invoke('widget:pick-bg'),
   getWidgetBg: () => ipcRenderer.invoke('widget:get-bg'),
