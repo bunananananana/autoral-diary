@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>今日小知识</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  min-height: 100vh;
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  background: #f6f7f4;
+  color: #202124;
+}
+.shell {
+  min-height: 100vh;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  -webkit-app-region: drag;
+}
+.eyebrow {
+  font-size: 12px;
+  color: #687066;
+}
+.close {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #687066;
+  font-size: 20px;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+.close:hover { background: rgba(0, 0, 0, 0.06); }
+.category {
+  display: inline-flex;
+  width: fit-content;
+  padding: 5px 9px;
+  border: 1px solid #d7ddd2;
+  border-radius: 999px;
+  color: #49613e;
+  background: #eef4ea;
+  font-size: 12px;
+}
+h1 {
+  font-size: 26px;
+  line-height: 1.25;
+  font-weight: 750;
+  letter-spacing: 0;
+}
+.hook {
+  font-size: 16px;
+  color: #52584f;
+  line-height: 1.6;
+}
+.content, .detail, .takeaway, .question {
+  font-size: 14px;
+  line-height: 1.75;
+}
+.content { color: #2c302a; }
+.detail {
+  display: none;
+  padding-top: 2px;
+  color: #3f453c;
+}
+.detail.visible { display: block; }
+.panel {
+  padding: 12px 14px;
+  border: 1px solid #dfe5da;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+}
+.label {
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: #75806f;
+}
+.takeaway { font-weight: 650; }
+.question { color: #3e5d75; }
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: #7b8377;
+}
+.actions {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+button.action {
+  min-height: 34px;
+  border: 1px solid #d6ddd1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #2f342e;
+  cursor: pointer;
+  font-size: 13px;
+}
+button.action:hover { background: #eef4ea; }
+button.primary {
+  border-color: #6d8d5b;
+  background: #6d8d5b;
+  color: #fff;
+}
+.toast {
+  min-height: 18px;
+  font-size: 12px;
+  color: #5d6a55;
+}
+</style>
+</head>
+<body>
+<main class="shell">
+  <div class="topbar">
+    <div class="eyebrow">每日 9 点 · 今日小知识</div>
+    <button class="close" id="closeBtn" title="关闭">×</button>
+  </div>
+  <div class="category" id="category"></div>
+  <h1 id="title"></h1>
+  <p class="hook" id="hook"></p>
+  <p class="content" id="content"></p>
+  <p class="detail" id="detail"></p>
+  <section class="panel">
+    <div class="label">记住这一点</div>
+    <div class="takeaway" id="takeaway"></div>
+  </section>
+  <section class="panel">
+    <div class="label">想一想</div>
+    <div class="question" id="question"></div>
+  </section>
+  <div class="meta" id="meta"></div>
+  <div class="toast" id="toast"></div>
+  <div class="actions">
+    <button class="action primary" id="readBtn">知道了</button>
+    <button class="action" id="detailBtn">展开</button>
+    <button class="action" id="favoriteBtn">收藏</button>
+    <button class="action" id="nextBtn">换一条</button>
+    <button class="action" id="insertBtn">写入日记</button>
+  </div>
+</main>
+<script>
+let currentCard = null;
+let expanded = false;
+
+const $ = (id) => document.getElementById(id);
+
+function setToast(text) {
+  $('toast').textContent = text;
+  if (text) setTimeout(() => { $('toast').textContent = ''; }, 1800);
+}
+
+function render(card) {
+  currentCard = card;
+  expanded = false;
+  $('category').textContent = `${card.category} · ${card.topic}`;
+  $('title').textContent = card.title;
+  $('hook').textContent = card.hook;
+  $('content').textContent = card.content;
+  $('detail').textContent = card.detail || '';
+  $('detail').classList.remove('visible');
+  $('detailBtn').textContent = card.detail ? '展开' : '已完整';
+  $('detailBtn').disabled = !card.detail;
+  $('takeaway').textContent = card.takeaway;
+  $('question').textContent = card.question;
+  $('meta').textContent = `难度 ${card.difficulty} · ${card.sourceBasis} · ${card.reviewStatus || 'pending'}`;
+}
+
+async function load(mode) {
+  const card = await window.api.getKnowledgeCard(mode);
+  if (card) render(card);
+}
+
+$('readBtn').addEventListener('click', async () => {
+  if (currentCard) await window.api.markKnowledgeRead(currentCard.id);
+  await window.api.closeKnowledgeWindow();
+});
+
+$('detailBtn').addEventListener('click', () => {
+  if (!currentCard?.detail) return;
+  expanded = !expanded;
+  $('detail').classList.toggle('visible', expanded);
+  $('detailBtn').textContent = expanded ? '收起' : '展开';
+});
+
+$('favoriteBtn').addEventListener('click', async () => {
+  if (!currentCard) return;
+  await window.api.favoriteKnowledge(currentCard.id);
+  setToast('已收藏');
+});
+
+$('nextBtn').addEventListener('click', () => load('next'));
+
+$('insertBtn').addEventListener('click', async () => {
+  if (!currentCard) return;
+  await window.api.insertKnowledgeToDiary(currentCard.id);
+  setToast('已写入今日日记');
+});
+
+$('closeBtn').addEventListener('click', () => window.api.closeKnowledgeWindow());
+
+load('today');
+</script>
+</body>
+</html>

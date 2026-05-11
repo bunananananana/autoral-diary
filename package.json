@@ -1,6 +1,6 @@
 {
   "name": "autoral-diary",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "极简桌面日记小工具 - Minimalist Desktop Diary Widget",
   "main": "main.js",
   "scripts": {
@@ -30,6 +30,8 @@
       "widget.html",
       "app.html",
       "export.html",
+      "knowledge.html",
+      "data/knowledge-cards.json",
       "assets/**/*",
       "node_modules/**/*"
     ],

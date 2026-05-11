@@ -34,5 +34,12 @@ contextBridge.exposeInMainWorld('api', {
   pickWidgetBg: () => ipcRenderer.invoke('widget:pick-bg'),
   getWidgetBg: () => ipcRenderer.invoke('widget:get-bg'),
   clearWidgetBg: () => ipcRenderer.invoke('widget:clear-bg'),
+  getKnowledgeCard: (mode) => ipcRenderer.invoke('knowledge:get-card', mode),
+  getKnowledgeState: () => ipcRenderer.invoke('knowledge:get-state'),
+  markKnowledgeRead: (id) => ipcRenderer.invoke('knowledge:mark-read', id),
+  favoriteKnowledge: (id) => ipcRenderer.invoke('knowledge:favorite', id),
+  dismissKnowledgeToday: () => ipcRenderer.invoke('knowledge:dismiss-today'),
+  insertKnowledgeToDiary: (id) => ipcRenderer.invoke('knowledge:insert-to-diary', id),
+  closeKnowledgeWindow: () => ipcRenderer.invoke('knowledge:close-window'),
   renderMarkdown,
 });

@@ -9,9 +9,13 @@ if (!gotTheLock) app.quit();
 let widgetWindow;
 let mainWindow;
 let exportWindow;
+let knowledgeWindow;
 let tray;
+let knowledgeReminderTimer;
 
 const dataDir = path.join(app.getPath('userData'), 'diaries');
+const knowledgeDataPath = path.join(__dirname, 'data', 'knowledge-cards.json');
+const knowledgeStatePath = path.join(app.getPath('userData'), 'knowledge-state.json');
 const exportFileExtension = 'autoral-diary';
 
 if (!fs.existsSync(dataDir)) {
@@ -50,6 +54,126 @@ function saveDiaryToDisk(date, content, updatedAt = new Date().toISOString()) {
   const data = { date, content, updatedAt };
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
   return data;
+}
+
+function todayStr() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+function loadKnowledgeCards() {
+  try {
+    const cards = JSON.parse(fs.readFileSync(knowledgeDataPath, 'utf-8'));
+    return Array.isArray(cards) ? cards.filter((card) => card && card.id) : [];
+  } catch {
+    return [];
+  }
+}
+
+function loadKnowledgeState() {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(knowledgeStatePath, 'utf-8'));
+    return {
+      readIds: Array.isArray(parsed.readIds) ? parsed.readIds : [],
+      favoriteIds: Array.isArray(parsed.favoriteIds) ? parsed.favoriteIds : [],
+      dismissedDates: Array.isArray(parsed.dismissedDates) ? parsed.dismissedDates : [],
+      lastShownDate: typeof parsed.lastShownDate === 'string' ? parsed.lastShownDate : '',
+      lastShownId: typeof parsed.lastShownId === 'string' ? parsed.lastShownId : '',
+    };
+  } catch {
+    return { readIds: [], favoriteIds: [], dismissedDates: [], lastShownDate: '', lastShownId: '' };
+  }
+}
+
+function saveKnowledgeState(state) {
+  fs.writeFileSync(knowledgeStatePath, JSON.stringify(state, null, 2), 'utf-8');
+}
+
+function pickKnowledgeCard(mode = 'today') {
+  const cards = loadKnowledgeCards();
+  if (!cards.length) return null;
+
+  const state = loadKnowledgeState();
+  const today = todayStr();
+  if (mode === 'today' && state.lastShownDate === today) {
+    const existing = cards.find((card) => card.id === state.lastShownId);
+    if (existing) return existing;
+  }
+
+  const readIds = new Set(state.readIds);
+  const unread = cards.filter((card) => !readIds.has(card.id));
+  const pool = unread.length ? unread : cards;
+  const seed = Number(today.replace(/-/g, ''));
+  const offset = mode === 'next' ? Math.floor(Math.random() * pool.length) : seed;
+  const card = pool[offset % pool.length];
+
+  state.lastShownDate = today;
+  state.lastShownId = card.id;
+  saveKnowledgeState(state);
+  return card;
+}
+
+function createKnowledgeWindow() {
+  if (knowledgeWindow && !knowledgeWindow.isDestroyed()) {
+    knowledgeWindow.show();
+    knowledgeWindow.focus();
+    return;
+  }
+
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  knowledgeWindow = new BrowserWindow({
+    width: 520,
+    height: 680,
+    minWidth: 460,
+    minHeight: 560,
+    x: Math.max(20, width - 560),
+    y: Math.max(20, height - 740),
+    title: '今日小知识',
+    show: false,
+    resizable: true,
+    backgroundColor: '#f6f7f4',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    }
+  });
+
+  knowledgeWindow.loadFile('knowledge.html');
+  knowledgeWindow.once('ready-to-show', () => {
+    knowledgeWindow.show();
+    knowledgeWindow.focus();
+  });
+  knowledgeWindow.on('closed', () => { knowledgeWindow = null; });
+}
+
+function shouldShowKnowledgeReminder() {
+  const state = loadKnowledgeState();
+  const today = todayStr();
+  const now = new Date();
+  const afterNine = now.getHours() >= 9;
+  return afterNine && state.lastShownDate !== today && !state.dismissedDates.includes(today);
+}
+
+function scheduleKnowledgeReminder() {
+  if (knowledgeReminderTimer) clearTimeout(knowledgeReminderTimer);
+
+  const now = new Date();
+  const next = new Date(now);
+  next.setHours(9, 0, 0, 0);
+  if (next <= now) next.setDate(next.getDate() + 1);
+
+  knowledgeReminderTimer = setTimeout(() => {
+    const state = loadKnowledgeState();
+    if (!state.dismissedDates.includes(todayStr())) {
+      createKnowledgeWindow();
+    }
+    scheduleKnowledgeReminder();
+  }, next.getTime() - now.getTime());
+
+  if (shouldShowKnowledgeReminder()) {
+    setTimeout(() => createKnowledgeWindow(), 1500);
+  }
 }
 
 function buildDiaryPreview(content) {
@@ -175,6 +299,7 @@ function createTray() {
 
   const buildMenu = () => Menu.buildFromTemplate([
     { label: '打开日记本', click: () => { mainWindow.show(); mainWindow.focus(); } },
+    { label: '今日小知识', click: () => createKnowledgeWindow() },
     {
       label: widgetWindow.isVisible() ? '隐藏桌面组件' : '显示桌面组件',
       click: () => {
@@ -328,6 +453,60 @@ ipcMain.handle('app:close-export-window', async () => {
   return true;
 });
 
+ipcMain.handle('knowledge:get-card', async (_, mode) => pickKnowledgeCard(mode));
+
+ipcMain.handle('knowledge:get-state', async () => loadKnowledgeState());
+
+ipcMain.handle('knowledge:mark-read', async (_, id) => {
+  const state = loadKnowledgeState();
+  if (id && !state.readIds.includes(id)) state.readIds.push(id);
+  state.lastShownDate = todayStr();
+  state.lastShownId = id || state.lastShownId;
+  saveKnowledgeState(state);
+  return true;
+});
+
+ipcMain.handle('knowledge:favorite', async (_, id) => {
+  const state = loadKnowledgeState();
+  if (id && !state.favoriteIds.includes(id)) state.favoriteIds.push(id);
+  saveKnowledgeState(state);
+  return true;
+});
+
+ipcMain.handle('knowledge:dismiss-today', async () => {
+  const state = loadKnowledgeState();
+  const today = todayStr();
+  if (!state.dismissedDates.includes(today)) state.dismissedDates.push(today);
+  saveKnowledgeState(state);
+  return true;
+});
+
+ipcMain.handle('knowledge:insert-to-diary', async (_, id) => {
+  const card = loadKnowledgeCards().find((item) => item.id === id);
+  if (!card) return false;
+
+  const date = todayStr();
+  const existing = loadDiaryFromDisk(date);
+  const snippet = [
+    '今日学到：',
+    `- ${card.title}：${card.takeaway}`,
+    `- ${card.content}`,
+  ].join('\n');
+  const content = existing?.content?.trim()
+    ? `${existing.content.trimEnd()}\n\n${snippet}`
+    : snippet;
+
+  saveDiaryToDisk(date, content);
+  return true;
+});
+
+ipcMain.handle('knowledge:close-window', async () => {
+  if (knowledgeWindow && !knowledgeWindow.isDestroyed()) {
+    knowledgeWindow.close();
+  }
+  return true;
+});
+
 ipcMain.handle('widget:pick-bg', async () => {
   const result = await dialog.showOpenDialog(widgetWindow, {
     title: '选择背景图片',
@@ -407,6 +586,7 @@ app.whenReady().then(() => {
   createWidgetWindow();
   createMainWindow();
   createTray();
+  scheduleKnowledgeReminder();
 
   globalShortcut.register('CommandOrControl+Shift+D', () => {
     if (widgetWindow.isVisible()) widgetWindow.hide();
