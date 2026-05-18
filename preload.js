@@ -41,5 +41,7 @@ contextBridge.exposeInMainWorld('api', {
   dismissKnowledgeToday: () => ipcRenderer.invoke('knowledge:dismiss-today'),
   insertKnowledgeToDiary: (id) => ipcRenderer.invoke('knowledge:insert-to-diary', id),
   closeKnowledgeWindow: () => ipcRenderer.invoke('knowledge:close-window'),
+  getSettings: () => ipcRenderer.invoke('settings:get'),
+  setKnowledgeReminder: (enabled) => ipcRenderer.invoke('settings:set-knowledge-reminder', enabled),
   renderMarkdown,
 });

@@ -14,6 +14,7 @@ let tray;
 let knowledgeReminderTimer;
 
 const dataDir = path.join(app.getPath('userData'), 'diaries');
+const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 const knowledgeDataPath = path.join(__dirname, 'data', 'knowledge-cards.json');
 const knowledgeStatePath = path.join(app.getPath('userData'), 'knowledge-state.json');
 const exportFileExtension = 'autoral-diary';
@@ -59,6 +60,42 @@ function saveDiaryToDisk(date, content, updatedAt = new Date().toISOString()) {
 function todayStr() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+function loadAppSettings() {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+    return {
+      ...parsed,
+      knowledgeReminderEnabled: parsed.knowledgeReminderEnabled !== false,
+    };
+  } catch {
+    return { knowledgeReminderEnabled: true };
+  }
+}
+
+function saveAppSettings(settings) {
+  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
+}
+
+function setKnowledgeReminderEnabled(enabled) {
+  const settings = loadAppSettings();
+  settings.knowledgeReminderEnabled = enabled !== false;
+  saveAppSettings(settings);
+
+  if (settings.knowledgeReminderEnabled) {
+    scheduleKnowledgeReminder();
+  } else {
+    if (knowledgeReminderTimer) {
+      clearTimeout(knowledgeReminderTimer);
+      knowledgeReminderTimer = null;
+    }
+    if (knowledgeWindow && !knowledgeWindow.isDestroyed()) {
+      knowledgeWindow.close();
+    }
+  }
+
+  return settings;
 }
 
 function loadKnowledgeCards() {
@@ -148,6 +185,7 @@ function createKnowledgeWindow() {
 }
 
 function shouldShowKnowledgeReminder() {
+  if (!loadAppSettings().knowledgeReminderEnabled) return false;
   const state = loadKnowledgeState();
   const today = todayStr();
   const now = new Date();
@@ -157,6 +195,8 @@ function shouldShowKnowledgeReminder() {
 
 function scheduleKnowledgeReminder() {
   if (knowledgeReminderTimer) clearTimeout(knowledgeReminderTimer);
+  knowledgeReminderTimer = null;
+  if (!loadAppSettings().knowledgeReminderEnabled) return;
 
   const now = new Date();
   const next = new Date(now);
@@ -164,6 +204,10 @@ function scheduleKnowledgeReminder() {
   if (next <= now) next.setDate(next.getDate() + 1);
 
   knowledgeReminderTimer = setTimeout(() => {
+    if (!loadAppSettings().knowledgeReminderEnabled) {
+      scheduleKnowledgeReminder();
+      return;
+    }
     const state = loadKnowledgeState();
     if (!state.dismissedDates.includes(todayStr())) {
       createKnowledgeWindow();
@@ -507,6 +551,10 @@ ipcMain.handle('knowledge:close-window', async () => {
   return true;
 });
 
+ipcMain.handle('settings:get', async () => loadAppSettings());
+
+ipcMain.handle('settings:set-knowledge-reminder', async (_, enabled) => setKnowledgeReminderEnabled(enabled));
+
 ipcMain.handle('widget:pick-bg', async () => {
   const result = await dialog.showOpenDialog(widgetWindow, {
     title: '选择背景图片',
@@ -520,11 +568,9 @@ ipcMain.handle('widget:pick-bg', async () => {
   const dest = path.join(app.getPath('userData'), `widget-bg.${ext}`);
   fs.copyFileSync(src, dest);
 
-  const settingsPath = path.join(app.getPath('userData'), 'settings.json');
-  let settings = {};
-  try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8')); } catch {}
+  const settings = loadAppSettings();
   settings.widgetBg = dest;
-  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
+  saveAppSettings(settings);
 
   const buf = fs.readFileSync(dest);
   const mimeMap = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp', bmp: 'image/bmp' };
@@ -532,9 +578,8 @@ ipcMain.handle('widget:pick-bg', async () => {
 });
 
 ipcMain.handle('widget:get-bg', async () => {
-  const settingsPath = path.join(app.getPath('userData'), 'settings.json');
   try {
-    const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+    const settings = loadAppSettings();
     if (settings.widgetBg && fs.existsSync(settings.widgetBg)) {
       const ext = path.extname(settings.widgetBg).slice(1).toLowerCase();
       const buf = fs.readFileSync(settings.widgetBg);
@@ -546,14 +591,12 @@ ipcMain.handle('widget:get-bg', async () => {
 });
 
 ipcMain.handle('widget:clear-bg', async () => {
-  const settingsPath = path.join(app.getPath('userData'), 'settings.json');
-  let settings = {};
-  try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8')); } catch {}
+  const settings = loadAppSettings();
   if (settings.widgetBg && fs.existsSync(settings.widgetBg)) {
     try { fs.unlinkSync(settings.widgetBg); } catch {}
   }
   delete settings.widgetBg;
-  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
+  saveAppSettings(settings);
   return true;
 });
 
